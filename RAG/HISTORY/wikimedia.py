@@ -3,11 +3,13 @@ import json
 import time
 import os
 
-OUTPUT_FILE = r'C:\Users\KimNgan\Desktop\Fake news\data_ground\history\wikimedia_en_raw_2000.jsonl'
+OUTPUT_FILE = r'D:\Fake-news-detections\RAG\HISTORY\wikimedia_5000.jsonl'
 LIMIT = 5000
 
+os.makedirs(os.path.dirname(OUTPUT_FILE), exist_ok=True)
+
 wiki_en = wikipediaapi.Wikipedia(
-    user_agent='FakeNewsResearchProject/1.0 (your-email@example.com)',
+    user_agent='ResearchProject/1.0 (ngan@example.com)',
     language='en'
 )
 
@@ -16,20 +18,23 @@ count = 0
 
 def get_articles_recursive(category_page, max_level=2, current_level=0):
     global count
-    
     if count >= LIMIT or current_level > max_level:
         return
 
-    print(f"\n>>> Level {current_level} - Scanning: {category_page.title}")
+    print(f"--- Đang quét: {category_page.title} (Level {current_level}) ---")
     
-    members = category_page.categorymembers
-    
+    try:
+        members = category_page.categorymembers
+    except Exception as e:
+        print(f"Lỗi truy cập category: {e}")
+        return
+
     for p in members.values():
         if count >= LIMIT: break
         
         if p.ns == wikipediaapi.Namespace.MAIN and p.title not in seen_titles:
             try:
-                content = p.summary if len(p.summary) > 500 else p.text[:4000]
+                content = p.text[:4000]
                 if len(content) < 300: continue
                 
                 data = {
@@ -44,37 +49,28 @@ def get_articles_recursive(category_page, max_level=2, current_level=0):
                 
                 seen_titles.add(p.title)
                 count += 1
-                if count % 10 == 0:
-                    print(f"   [+] Progress: {count}/{LIMIT} - Saved: {p.title}")
-                
+                print(f"   [+] Đã lưu: {count}/{LIMIT} - {p.title}")
                 time.sleep(0.05) 
-                
             except Exception as e:
-                print(f"Error at {p.title}: {e}")
+                print(f"Lỗi bài {p.title}: {e}")
         
         elif p.ns == wikipediaapi.Namespace.CATEGORY:
             get_articles_recursive(p, max_level, current_level + 1)
 
 def main():
     if os.path.exists(OUTPUT_FILE):
-        os.remove(OUTPUT_FILE)
-    HISTORY_CATEGORIES = [
-        "Category:Ancient civilizations",
-        "Category:Military history",
-        "Category:History by period",
-        "Category:Historical events",
-        "Category:Biographies"
-    ]
+        try:
+            os.remove(OUTPUT_FILE)
+            print("Đã xóa file cũ để ghi mới.")
+        except:
+            print("File cũ đang mở ở chương trình khác, sẽ ghi đè.")
 
-    print(f"--- BẮT ĐẦU CÀO ĐỆ QUY {LIMIT} BÀI ---")
-    
+    HISTORY_CATEGORIES = ["Category:Military history", "Category:Ancient civilizations"]
+
     for cat_name in HISTORY_CATEGORIES:
         if count >= LIMIT: break
         cat_page = wiki_en.page(cat_name)
-        if cat_page.exists():
-            get_articles_recursive(cat_page)
-
-    print(f"\n--- HOÀN THÀNH! Tổng cộng lấy được: {count} bài ---")
+        get_articles_recursive(cat_page)
 
 if __name__ == "__main__":
     main()
