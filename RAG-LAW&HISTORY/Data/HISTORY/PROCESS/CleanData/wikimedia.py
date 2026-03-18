@@ -7,7 +7,7 @@ OUTPUT_FILE = r'D:\Fake-news-detections\RAG\HISTORY\wikimedia_5000.jsonl'
 LIMIT = 5000
 
 os.makedirs(os.path.dirname(OUTPUT_FILE), exist_ok=True)
-
+    
 wiki_en = wikipediaapi.Wikipedia(
     user_agent='ResearchProject/1.0 (ngan@example.com)',
     language='en'
