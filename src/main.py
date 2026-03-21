@@ -4,9 +4,10 @@ from typing import Dict, Any, Optional
 from pathlib import Path
 
 from src.config import (
-    PROJECT_ROOT, DATA_DIR, MODELS_DIR, OPENAI_API_KEY,
-    EMBED_MODEL, BGE_MODEL
+    PROJECT_ROOT, DATA_DIR, MODELS_DIR, OPENAI_API_KEY, PROCESSED_DATA_PATH,
+    EMBEDDING_MODEL_NAME, BGE_MODEL
 )
+from src.retriever.embedder import BGEEmbedder
 # Placeholder imports for real modules (to be implemented)
 # from src.claim_extraction.bert_extractor import ClaimExtractor
 # from src.retriever.faiss_retriever import FaissRetriever
@@ -25,6 +26,9 @@ class FakeNewsDetector:
         if not DATA_DIR.exists():
             raise FileNotFoundError(f"Data directory missing: {DATA_DIR}. Run data prep first.")
         
+        # Real BGE embedder
+        self.embedder = BGEEmbedder()
+        
         # Stub models (replace with real HF models later)
         self.claim_extractor = self._stub_claim_extractor()
         self.retriever = self._stub_retriever()
@@ -38,12 +42,15 @@ class FakeNewsDetector:
         return "stub_extractor"
 
     def _stub_retriever(self):
-        """Stub for FAISS retrieval from LAW/HISTORY."""
-        index_path = MODELS_DIR / "faiss_index.faiss"
-        if not index_path.exists():
-            logger.warning(f"FAISS index missing at {index_path}. Create first.")
-        logger.info("Loaded stub FaissRetriever.")
-        return "stub_retriever"
+        """BGE embedder for query encoding (next: FAISS search)."""
+        logger.info("BGEEmbedder ready for retrieval (stub). Example: self.embedder.embed_query(claim)")
+        return "bge_retriever_stub"
+    
+    def example_retrieve(self, claim: str, k: int = 5) -> Dict[str, Any]:
+        """Test retrieval stub."""
+        q_emb = self.embedder.embed_query(claim)
+        logger.info(f"Query emb for '{claim[:50]}...': {q_emb.shape}")
+        return {"top_k": k, "query_emb": q_emb}
 
     def _stub_verifier(self):
         """Stub for RoBERTa verification."""

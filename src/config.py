@@ -26,10 +26,14 @@ MODELS_DIR = Path(os.getenv("MODELS_DIR", MODELS_DIR))
 # API Keys
 OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "your-key-here")  # Set in .env
 
-# Other constants
-EMBED_MODEL: str = "text-embedding-3-large"
-BGE_MODEL: str = "BAAI/bge-large-en-v1.5"
+# Embedding constants (BGE local/free)
+EMBEDDING_MODEL_NAME = "BAAI/bge-small-en-v1.5"  # Fast, 384 dim; use bge-m3 for multi-lang
+BGE_MODEL = EMBEDDING_MODEL_NAME  # Alias
+PROCESSED_DATA_PATH = DATA_DIR / "processed" / "knowledge_unified.pkl"
 CHUNK_SIZE: int = 1000
+
+# Backwards compat
+EMBED_MODEL = "deprecated-openai"  # Use BGE now
 
 def ensure_dirs() -> None:
     """Create necessary directories if missing."""
