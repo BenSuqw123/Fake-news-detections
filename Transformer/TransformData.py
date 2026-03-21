@@ -57,4 +57,6 @@ df = df.drop_duplicates(subset=["claim"])
 df = df.sample(frac=1, random_state=42).reset_index(drop=True)
 
 # save dataset
-df.to_csv("combined_data.csv", index=False)
+output_path = PROJECT_ROOT / "Transformer" / "combined_data.csv"
+df.to_csv(output_path, index=False)
+logger.info(f"Combined data saved to {output_path}")

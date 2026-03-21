@@ -1,26 +1,41 @@
 import pandas as pd
-path=r"D:\Fake-news-detections\RAG-LAW&HISTORY\Data\LAW\courtlistener_6000_clean.csv"
-# df = pd.read_parquet(r'D:\Fake-news-detections\RAG-LAW&HISTORY\Data\LAW\courtlistener_6000_clean.parquet')
-# df.to_csv(r'D:\Fake-news-detections\RAG-LAW&HISTORY\Data\LAW\courtlistener_6000_clean.csv', index=False)
+
+path = r"C:\Users\ACER\Documents\Desktop\Fake News Detection\Fake-news-detections\RAG-LAW&HISTORY\Data\LAW\courtlistener_6000_clean.csv"
 
 df = pd.read_csv(path)
-df = df.drop(columns=['date_filed','source'])
-def chunk_text(text, chunk_size=500, overlap=100):
+df = df.drop(columns=['date_filed', 'source'], errors='ignore')
+
+df["content"] = df["content"].fillna("").astype(str)
+df["title"] = df["title"].fillna("").astype(str)
+
+def chunk_by_paragraph(text, max_chars=1200, overlap_chars=200):
+    paragraphs = [p.strip() for p in text.split("\n") if p.strip()]
     chunks = []
-    start = 0
-    text_lenght = len(text)
-    
-    while start < text_lenght:
-        end = min(start + chunk_size, text_lenght)
-        chunks.append(text[start:end])
-        start += chunk_size - overlap
+    current_chunk = ""
+
+    for para in paragraphs:
+        if len(current_chunk) + len(para) + 1 <= max_chars:
+            current_chunk += (" " if current_chunk else "") + para
+        else:
+            if current_chunk:
+                chunks.append(current_chunk.strip())
+            # overlap bằng phần cuối chunk trước
+            overlap_text = current_chunk[-overlap_chars:] if current_chunk else ""
+            current_chunk = (overlap_text + " " + para).strip()
+
+    if current_chunk:
+        chunks.append(current_chunk.strip())
 
     return chunks
 
-df["content"] = df["content"].apply(chunk_text)
+df["chunks"] = df["content"].apply(chunk_by_paragraph)
+df = df.explode("chunks").dropna(subset=["chunks"]).reset_index(drop=True)
 
-df = df.explode("content").reset_index(drop=True)
+df["content"] = df["title"] + ": " + df["chunks"]
+df = df.drop(columns=["chunks"])
 
-df["content"] = df["title"] + ": " + df["content"]
-
-df.to_csv(r"D:\Fake-news-detections\RAG-LAW&HISTORY\Data\LAW\courtlistener_chunked.csv", index=False, encoding='utf-8-sig')  
+df.to_csv(
+    r"C:\Users\ACER\Documents\Desktop\Fake News Detection\Fake-news-detections\RAG-LAW&HISTORY\Data\LAW\courtlistener_chunked.csv",
+    index=False,
+    encoding="utf-8-sig"
+)
