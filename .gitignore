@@ -1,2 +1,17 @@
 venv
 *.csv
+*.pkl
+*.faiss
+.env
+.env.example
+__pycache__/
+*.py[cod]
+*$py.class
+.DS_Store
+*.ipynb_checkpoints
+
+*.log
+*.locks
+RAG-LAW&HISTORY/Models/
+*.safetensors
+*.bin
