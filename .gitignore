@@ -4,7 +4,7 @@ venv
 *.faiss
 .env
 .env.example
-__pycache__/
+__pycache__/*
 *.py[cod]
 *$py.class
 .DS_Store
@@ -15,3 +15,6 @@ __pycache__/
 RAG-LAW&HISTORY/Models/
 *.safetensors
 *.bin
+my_chroma_db
+.early.coverage
+Models
