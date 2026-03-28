@@ -102,44 +102,8 @@ def search_chroma(payload: dict, top_k: int = 3) -> list:
         print(f"Lỗi truy vấn ChromaDB: {e}")
         return []
     
-def verify_fake_news(user_input: str, retrieved_docs: list) -> str:
-    if not retrieved_docs:
-        return "Verdict: NOT ENOUGH INFORMATION\nReasoning: Không tìm thấy tài liệu trong Database."
-
-    context_parts = []
-    for doc in retrieved_docs:
-        content = doc.get('text', 'No content')
-        meta = doc.get('metadata', {})
-        source_title = meta.get('title', 'Unknown Source')
-        
-        context_parts.append(f"SOURCE [{source_title}]: {content}")
-
-    context_text = "\n\n".join(context_parts)
+# def verify_fake_news(user_input: str, retrieved_docs: list) -> str:
     
-    prompt = f"""You are a Fact-Checking Bot. Verify the Claim using ONLY the Source Data.
-
---- SOURCE DATA ---
-{context_text}
--------------------
-
-Claim: "{user_input}"
-
-INSTRUCTIONS:
-1. Extract ALL sentences from the Source Data that mention keywords in the Claim.
-2. Compare the technical definitions and historical facts in the Source against the Claim.
-3. If the Source is truncated (ends abruptly), only verify based on the available text.
-
-OUTPUT FORMAT:
-- Evidence Found: (Paste exact sentence)
-- Verdict: [TRUE / FALSE / NOT ENOUGH INFORMATION]
-- Reasoning: (Short explanation)"""
-
-    response = ollama.chat(model='llama3.2', messages=[
-        {'role': 'system', 'content': 'You are a strict fact-checker. Use only provided text.'},
-        {'role': 'user', 'content': prompt}
-    ])
-    
-    return response['message']['content'].strip()
 
 
 def process_fake_news_query(user_input: str) -> str:
@@ -157,7 +121,8 @@ def process_fake_news_query(user_input: str) -> str:
     payload=format_search_payload(clean_query, domain)
     print(payload)
     docs = search_chroma(payload, top_k=5)
-    return verify_fake_news(payload, docs)
+    return docs
+    # return verify_fake_news(payload, docs)
 
 if __name__ == "__main__":
     query = " Military history is the study of armed conflict in the history of humanity, and its impact on the societies, cultures and economies thereof, as well as the resulting changes to local and international relationships. Professional historians normally focus on military affairs that had a major impact on the societies involved as well as the aftermath of conflicts, while amateur historians and hobbyists often take a larger interest in the details of battles, equipment, and uniforms in use. The essen"
@@ -169,4 +134,5 @@ if __name__ == "__main__":
     # print(sx)
     # domain=kq.lower
     test = process_fake_news_query(query)
-    print(test)
+    for i in test:
+        print(i)

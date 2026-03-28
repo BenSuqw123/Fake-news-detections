@@ -5,7 +5,7 @@ from openai import OpenAI
 
 client = OpenAI(api_key="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")
 
-csv_path = r"C:\Users\ACER\Documents\Desktop\Fake News Detection\Fake-news-detections\RAG-LAW&HISTORY\Data\LAW\courtlistener_chunked.csv"
+csv_path = r"D:\Fake-news-detections\RAG-LAW&HISTORY\Data\LAW\courtlistener_chunked.csv"
 df = pd.read_csv(csv_path)
 
 df["content"] = df["content"].fillna("").astype(str)
