@@ -18,3 +18,5 @@ RAG-LAW&HISTORY/Models/
 my_chroma_db
 .early.coverage
 Models
+chroma_db
+RAG-LAW&HISTORY/Data/VectorBD/chroma_db/
