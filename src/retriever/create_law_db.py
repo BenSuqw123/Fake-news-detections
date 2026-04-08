@@ -1,68 +1,107 @@
 import sys
 import json
+import os
+import gc
 from pathlib import Path
 import chromadb
 from tqdm import tqdm
+import torch
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
+# Thiết lập project_root
+project_root = Path("/content/drive/MyDrive/Fake-news-detections")
+os.chdir(project_root)
 
-from src.config import MODELS_DIR
-from src.retriever.embedder import BGEEmbedder
+# Thêm đường dẫn vào sys.path
+sys.path.insert(0, str(project_root))
 
-def build_law_database():
-    json_path = Path("d:/Fake-news-detections/RAG-LAW/Data/law_articles_cleaned.json")
-    
-    if not json_path.exists():
-        print(f"Không tìm thấy file dữ liệu: {json_path}")
-        return
-        
-    print("Đang tải dữ liệu JSON...")
+try:
+    from src.retriever.embedder import BGEM3Embedder
+except ImportError:
+    print("❌ Lỗi: Kiểm tra lại cấu trúc thư mục src/retriever/embedder.py")
+    sys.exit(1)
+
+def build_law_database_resumable_v2():
+    print("🚀 Đang khởi động tiến trình Embedding tối ưu trên CPU...")
+
+    json_path = project_root / "RAG-LAW/Data/law_articles_cleaned.json"
+    db_path = str(project_root / "RAG-LAW/Models/law_chroma")
+
+    # 1. Đọc dữ liệu
     with open(json_path, "r", encoding="utf-8") as f:
         articles = json.load(f)
-        
-    print(f"Đã tải: {len(articles)} điều luật.")
-    
-    print("Khởi tạo BGE Embedder...")
-    embedder = BGEEmbedder()
-    
-    db_path = str(MODELS_DIR / "law")
-    print(f"Khởi tạo ChromaDB tại: {db_path}")
-    
-    client = chromadb.PersistentClient(path=db_path)
-    
-    try:
-        client.delete_collection(name="law")
-        print("Đã xóa collection cũ.")
-    except Exception:
-        pass
-        
-    collection = client.create_collection(name="law")
-    
-    batch_size = 500
-    for i in range(0, len(articles), batch_size):
-        batch = articles[i : i + batch_size]
-        
-        texts_to_embed = [item["content"] for item in batch]
-        ids = [f"law_{i+j}" for j in range(len(batch))]
-        metadatas = [{
-            "title": item["law_title"],
-            "article_name": item["article"],
-            "url": item["url"],
-            "source": "law"
-        } for item in batch]
-        
-        print(f"Đang Embedding batch {i//batch_size + 1}/{(len(articles)//batch_size)+1}...")
-        embeddings = embedder.embed_documents(texts_to_embed)
-        
-        print(f"Đang lưu vào ChromaDB...")
-        collection.add(
-            ids=ids,
-            embeddings=embeddings.tolist(),
-            documents=texts_to_embed,
-            metadatas=metadatas
-        )
+    print(f"📂 Đã tải: {len(articles)} điều luật.")
 
-    print(f"Đã lưu toàn bộ vector vào ChromaDB ('law' domain).")
+    # 2. Khởi tạo Embedder (CPU)
+    # Tối ưu số luồng CPU để không bị nghẽn
+    torch.set_num_threads(4) 
+    embedder = BGEM3Embedder(device='cpu')
+    
+    # 3. Khởi tạo ChromaDB
+    client = chromadb.PersistentClient(path=db_path)
+    collection = client.get_or_create_collection(
+        name="law",
+        metadata={"hnsw:space": "cosine"}
+    )
+
+    # 4. Kiểm tra Resume
+    existing_ids = set()
+    if collection.count() > 0:
+        # Lấy ID theo từng đợt để tránh treo RAM nếu DB quá lớn
+        existing_ids = set(collection.get(include=[])['ids'])
+    
+    print(f"📊 Đã có {len(existing_ids)} bản ghi trong DB. Đang lọc dữ liệu mới...")
+
+    # Chuẩn bị danh sách cần xử lý
+    to_process = []
+    for i, item in enumerate(articles):
+        # Dùng ID dựa trên nội dung hoặc index cố định để Resume chính xác
+        doc_id = f"law_{i}" 
+        if doc_id not in existing_ids:
+            to_process.append((doc_id, item))
+
+    if not to_process:
+        print("✅ Dữ liệu đã đầy đủ. Không cần chạy thêm.")
+        return
+
+    print(f"🔥 Cần xử lý thêm: {len(to_process)} điều luật.")
+
+    # 5. Vòng lặp xử lý tối ưu
+    # Trên CPU Colab, batch_size từ 4-8 là điểm cân bằng giữa tốc độ và RAM
+    OPTIMAL_BATCH = 8 
+    
+    for i in tqdm(range(0, len(to_process), OPTIMAL_BATCH), desc="Indexing"):
+        batch = to_process[i : i + OPTIMAL_BATCH]
+        
+        batch_ids = [x[0] for x in batch]
+        # Giới hạn 2500 ký tự để CPU xử lý nhanh và vẫn đủ ngữ cảnh luật
+        batch_texts = [x[1].get("content", "")[:2500] for x in batch]
+        batch_metadatas = [{
+            "title": x[1].get("law_title", "N/A"),
+            "article": x[1].get("article", "N/A"),
+            "url": x[1].get("url", "N/A")
+        } for x in batch]
+
+        try:
+            # Embedding
+            embeddings = embedder.embed_documents(batch_texts)
+            
+            # Lưu vào DB
+            collection.add(
+                ids=batch_ids,
+                embeddings=embeddings.tolist(),
+                documents=batch_texts,
+                metadatas=batch_metadatas
+            )
+            
+            # Dọn dẹp RAM sau mỗi 10 batch
+            if i % (OPTIMAL_BATCH * 10) == 0:
+                gc.collect()
+                
+        except Exception as e:
+            print(f"\n⚠️ Lỗi tại batch {i}: {e}. Đang bỏ qua để tiếp tục...")
+            continue
+
+    print(f"\n✅ Hoàn thành! Tổng số bản ghi hiện tại: {collection.count()}")
 
 if __name__ == "__main__":
-    build_law_database()
+    build_law_database_resumable_v2()
