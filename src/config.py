@@ -13,10 +13,10 @@ load_dotenv()
 
 # Dynamically determine project root: parent of src/
 PROJECT_ROOT: Path = Path(__file__).resolve().parent.parent
-DATA_DIR: Path = PROJECT_ROOT / "RAG-LAW&HISTORY" / "Data"
+DATA_DIR: Path = PROJECT_ROOT / "RAG-LAW" / "Data"
 TRANSFORMER_DIR: Path = PROJECT_ROOT / "Transformer"
 RAW_DATA_DIR: Path = PROJECT_ROOT / "liar_dataset"
-MODELS_DIR: Path = PROJECT_ROOT / "RAG-LAW&HISTORY" / "Models"
+MODELS_DIR: Path = PROJECT_ROOT / "RAG-LAW" / "Models"
 
 # Environment overrides (optional)
 DATA_DIR = Path(os.getenv("DATA_DIR", DATA_DIR))
