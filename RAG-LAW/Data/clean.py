@@ -61,9 +61,9 @@ if __name__ == "__main__":
         with open(data_path, "r", encoding="utf-8") as f:
             raw_data = json.load(f)
         
-        print(f"🔄 Đang xử lý {len(raw_data)} bản ghi từ '{data_path}' ...")
+        print(f"Đang xử lý {len(raw_data)} bản ghi từ '{data_path}' ...")
         cleaned_data = clean_dataset(raw_data)
         
         with open(output_path, "w", encoding="utf-8") as f:
             json.dump(cleaned_data, f, ensure_ascii=False, indent=2)
-        print(f"✅ Đã dọn dẹp và lưu {len(cleaned_data)} bản ghi sạch tại: {output_path}")
+        print(f"Đã dọn dẹp và lưu {len(cleaned_data)} bản ghi sạch tại: {output_path}")

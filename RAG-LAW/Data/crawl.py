@@ -12,7 +12,7 @@ HEADERS = {
     "Referer": "https://thuvienphapluat.vn/"
 }
 
-# --- HÀM THÊM MỚI ĐỂ GHI FILE KIỂM TRA ---
+
 def save_preview_to_txt(law_data):
     """Ghi dữ liệu vừa trích xuất được ra file txt để kiểm tra nhanh"""
     file_name = "kiem_tra_ket_qua.txt"
@@ -83,7 +83,7 @@ def parse_law(url):
 
     # 3. LÀM SẠCH cực kỳ quan trọng
     for a in content_div.find_all("a"):
-        a.unwrap() # Bỏ thẻ link nhưng giữ lại chữ (ví dụ: "Điều 12" không còn là link)
+        a.unwrap() 
     
     for trash in content_div.select("script, style, .LinkVB, .note"):
         trash.decompose() # Xóa hẳn rác
@@ -109,7 +109,7 @@ def parse_law(url):
             if current_art and len(current_art['content']) > 50: # Tránh lưu danh mục rác
                 # Nếu độ dài của content gần bằng độ dài của title, flag as failed extraction
                 if len(current_art['content']) <= len(current_art['article']) + 15:
-                    print(f"  ⚠️ Cảnh báo: Lỗi trích xuất '{current_art['article']}' (Chỉ có tiêu đề, thiếu nội dung).")
+                    print(f"Cảnh báo: Lỗi trích xuất '{current_art['article']}' (Chỉ có tiêu đề, thiếu nội dung).")
                 articles.append(current_art)
             
             current_art = {
@@ -126,7 +126,7 @@ def parse_law(url):
     # Thêm điều cuối cùng
     if current_art and len(current_art['content']) > 50:
         if len(current_art['content']) <= len(current_art['article']) + 15:
-            print(f"  ⚠️ Cảnh báo: Lỗi trích xuất '{current_art['article']}' (Chỉ có tiêu đề, thiếu nội dung).")
+            print(f"Cảnh báo: Lỗi trích xuất '{current_art['article']}' (Chỉ có tiêu đề, thiếu nội dung).")
         articles.append(current_art)
 
     if not articles: return None
@@ -140,7 +140,6 @@ def parse_law(url):
 
 def generate_target_urls():
     return [
-        # --- DANH SÁCH BẠN ĐÃ CÓ (1-10) ---
         "https://thuvienphapluat.vn/van-ban/Quyen-dan-su/Hien-phap-nam-2013-215627.aspx",
         "https://thuvienphapluat.vn/van-ban/Quyen-dan-su/Bo-luat-dan-su-2015-296215.aspx",
         "https://thuvienphapluat.vn/van-ban/Trach-nhiem-hinh-su/Bo-luat-hinh-su-2015-296661.aspx",
@@ -151,52 +150,20 @@ def generate_target_urls():
         "https://thuvienphapluat.vn/van-ban/Quyen-dan-su/Luat-Hon-nhan-va-gia-dinh-2014-239103.aspx",
         "https://thuvienphapluat.vn/van-ban/Giao-thong-Van-tai/Luat-Trat-tu-an-toan-giao-thong-duong-bo-2024-617835.aspx",
         "https://thuvienphapluat.vn/van-ban/Bo-may-hanh-chinh/Luat-Can-cuoc-2023-536412.aspx",
-
-        # --- BỔ SUNG CÁC VĂN BẢN MỚI NHẤT & QUAN TRỌNG NHẤT ---
-        
-        # 11. Luật Bảo hiểm xã hội 2024 (Rất quan trọng, hiệu lực 2025)
         "https://thuvienphapluat.vn/van-ban/Bao-hiem/Luat-Bao-hiem-xa-hoi-2024-617830.aspx",
-        
-        # 12. Luật Nhà ở 2023 (Hiệu lực từ 01/08/2024)
         "https://thuvienphapluat.vn/van-ban/Bat-dong-san/Luat-Nha-o-2023-533568.aspx",
-        
-        # 13. Luật Kinh doanh bất động sản 2023 (Đồng bộ với Luật Đất đai)
         "https://thuvienphapluat.vn/van-ban/Bat-dong-san/Luat-Kinh-doanh-bat-dong-san-2023-529067.aspx",
-        
-        # 14. Luật Các tổ chức tín dụng 2024 (Ảnh hưởng toàn bộ ngành ngân hàng)
         "https://thuvienphapluat.vn/van-ban/Tai-chinh-nha-nuoc/Luat-Cac-to-chuc-tin-dung-2024-411330.aspx",
-        
-        # 15. Luật Đấu thầu 2023
         "https://thuvienphapluat.vn/van-ban/Dau-thau-Cong-san/Luat-Dau-thau-2023-524435.aspx",
-        
-        # 16. Luật Đầu tư 2020
         "https://thuvienphapluat.vn/van-ban/Dau-tu/Luat-Dau-tu-2020-431835.aspx",
-        
-        # 17. Luật Giao dịch điện tử 2023 (Cực kỳ quan trọng cho chuyển đổi số)
         "https://thuvienphapluat.vn/van-ban/Tai-chinh-nha-nuoc/Luat-Giao-dich-dien-tu-2023-540153.aspx",
-        
-        # 18. Luật Quản lý thuế 2019
         "https://thuvienphapluat.vn/van-ban/Thue-Phi-Le-phi/Luat-Quan-ly-thue-2019-417387.aspx",
-        
-        # 19. Bộ luật Tố tụng Hình sự 2015
         "https://thuvienphapluat.vn/van-ban/Trach-nhiem-hinh-su/Bo-luat-To-tung-hinh-su-2015-296884.aspx",
-        
-        # 20. Bộ luật Tố tụng Dân sự 2015
         "https://thuvienphapluat.vn/van-ban/Thu-tuc-To-tung/Bo-luat-to-tung-dan-su-2015-298344.aspx",
-        
-        # 21. Luật Ban hành văn bản quy phạm pháp luật 2015
         "https://thuvienphapluat.vn/van-ban/Bo-may-hanh-chinh/Luat-ban-hanh-van-ban-quy-pham-phap-luat-2015-282300.aspx",
-        
-        # 22. Luật Bảo vệ quyền lợi người tiêu dùng 2023
         "https://thuvienphapluat.vn/van-ban/Thuong-mai/Luat-Bao-ve-quyen-loi-nguoi-tieu-dung-2023-533564.aspx",
-        
-        # 23. Luật Khám bệnh, chữa bệnh 2023
         "https://thuvienphapluat.vn/van-ban/The-thao-Y-te/Luat-Kham-benh-chua-benh-2023-535311.aspx",
-        
-        # 24. Luật Công chứng 2014 (Văn bản cốt lõi cho dịch vụ pháp lý)
         "https://thuvienphapluat.vn/van-ban/Bo-may-hanh-chinh/Luat-Cong-chung-2014-238299.aspx",
-        
-        # 25. Luật Phòng, chống tham nhũng 2018
         "https://thuvienphapluat.vn/van-ban/Bo-may-hanh-chinh/Luat-Phong-chong-tham-nhung-2018-401800.aspx"
     ]
 
@@ -239,23 +206,22 @@ def main():
         law = parse_law(link)
         if law and law['num_articles'] > 0:
             if law['law_title'] in seen_titles:
-                print(f"[{i+1}/{len(target_urls)}] ⏭️ Đã có dữ liệu luật này, bỏ qua: {law['law_title']}")
+                print(f"[{i+1}/{len(target_urls)}] Đã có dữ liệu luật này, bỏ qua: {law['law_title']}")
                 continue
                 
             # Loại bỏ luật bị lấy sai theo cấu trúc
             if "Nghị định 91/2026/NĐ-CP" in law['law_title'] or "hướng dẫn Luật Giáo dục đại học" in law['law_title']:
-                print(f"[{i+1}/{len(target_urls)}] ⚠️ Đã chặn luật cào sai: {law['law_title']}")
+                print(f"[{i+1}/{len(target_urls)}] Đã chặn luật cào sai: {law['law_title']}")
                 continue
             
             seen_titles.add(law['law_title'])
             
-            # --- DÒNG THÊM MỚI: GỌI HÀM IN RA FILE TXT ---
             save_preview_to_txt(law)
             
             all_data.append(law)
             valid_laws += 1
             total_articles += law['num_articles']
-            print(f"[{i+1}/{len(target_urls)}] ✅ Xong: {law['law_title']} (Các điều: {law['num_articles']})")
+            print(f"[{i+1}/{len(target_urls)}] Xong: {law['law_title']} (Các điều: {law['num_articles']})")
             
             flat_data = []
             for d_law in all_data:
@@ -269,7 +235,7 @@ def main():
             with open("law_articles_full.json", "w", encoding="utf-8") as f:
                 json.dump(flat_data, f, ensure_ascii=False, indent=2)
         else:
-            print(f"[{i+1}/{len(target_urls)}] ❌ Bỏ qua (không có nội dung phù hợp): {link}")
+            print(f"[{i+1}/{len(target_urls)}] Bỏ qua (không có nội dung phù hợp): {link}")
             
         time.sleep(random.uniform(1.5, 3.5))
 

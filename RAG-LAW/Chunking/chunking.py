@@ -1,5 +1,6 @@
 import json
 import os
+import re
 
 def chunk_text(text, chunk_size_words, overlap_words):
     """
@@ -39,8 +40,6 @@ def process_chunking(input_path, output_path, chunk_size_words=200, overlap_word
         if not content:
             continue
             
-        # Dọn dẹp lỗi khoảng trắng dư trước dấu câu (vd: "Điều 2 ." -> "Điều 2.") xảy ra do split/join hoặc do crawl
-        import re
         article = re.sub(r'\s+([.,:;!?])', r'\1', article).strip()
         content = re.sub(r'\s+([.,:;!?])', r'\1', content).strip()
         law_title = re.sub(r'\s+([.,:;!?])', r'\1', law_title).strip()
@@ -89,8 +88,6 @@ if __name__ == "__main__":
     # Đường dẫn file output dành cho nhúng Vector DB
     output_file = r"D:\Fake-news-detections\RAG-LAW\Data\law_chunks.json"
     
-    # Cấu hình Chunking: Phù hợp cho model Embedding đa ngôn ngữ (vd: PhoBERT, bge-m3)
-    # 150 từ tiếng Việt ~ khoảng 200 - 250 tokens
     CHUNK_SIZE_WORDS = 500
     OVERLAP_WORDS = 100
     
