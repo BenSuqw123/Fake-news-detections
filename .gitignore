@@ -15,4 +15,4 @@ __pycache__/*
 my_chroma_db
 .early.coverage
 chroma_db
-RAG-LAW&HISTORY/Data/VectorBD/chroma_db/
+bm25_evaluation.py

@@ -7,7 +7,7 @@ import chromadb
 from tqdm import tqdm
 import torch
 
-project_root = Path(r"D:\Fake-news-detections")
+project_root = Path(r"/content/drive/MyDrive/Fake-news-detections")
 os.chdir(project_root)
 
 sys.path.insert(0, str(project_root))
@@ -19,7 +19,7 @@ except ImportError:
     sys.exit(1)
 
 def build_law_database_resumable():
-    json_path = project_root / "RAG-LAW/Data/law_articles_cleaned.json"
+    json_path = project_root / "RAG-LAW/Data/law_chunks.json"
     db_path = str(project_root / "RAG-LAW/Models/law_chroma")
 
     with open(json_path, "r", encoding="utf-8") as f:
@@ -43,7 +43,7 @@ def build_law_database_resumable():
 
     to_process = []
     for i, item in enumerate(articles):
-        doc_id = f"law_{i}" 
+        doc_id = f"law_chunk_{i}" 
         if doc_id not in existing_ids:
             to_process.append((doc_id, item))
 
@@ -59,11 +59,12 @@ def build_law_database_resumable():
         batch = to_process[i : i + OPTIMAL_BATCH]
         
         batch_ids = [x[0] for x in batch]
-        batch_texts = [x[1].get("content", "")[:2500] for x in batch]
+        batch_texts = [x[1].get("text", "") for x in batch]
         batch_metadatas = [{
             "title": x[1].get("law_title", "N/A"),
             "article": x[1].get("article", "N/A"),
-            "url": x[1].get("url", "N/A")
+            "url": x[1].get("url", "N/A"),
+            "chunk_id": x[1].get("chunk_id", 0)
         } for x in batch]
 
         try:
