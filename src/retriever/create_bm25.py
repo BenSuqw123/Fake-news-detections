@@ -8,7 +8,7 @@ from rank_bm25 import BM25Okapi
 from underthesea import word_tokenize 
 
 def build_bm25_standalone():
-    project_root = Path(r"D:\Fake-news-detections")
+    project_root = Path(r"C:\Users\ACER\Documents\Desktop\Fake News Detection")
     json_path = project_root / "RAG-LAW/Data/law_chunks.json" 
     bm25_save_path = project_root / "RAG-LAW/Models/bm25/bm25_database.pkl"
 

@@ -9,7 +9,7 @@ def load_bm25():
     global BM25_DATA
 
     if BM25_DATA is None:
-        path = Path(r"D:\Fake-news-detections\RAG_LAW\Models\bm25\bm25_database.pkl")
+        path = Path(__file__).resolve().parent.parent / "Models" / "bm25" / "bm25_database.pkl"
         with open(path, "rb") as f:
             BM25_DATA = pickle.load(f)
 

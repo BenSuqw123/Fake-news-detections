@@ -7,8 +7,10 @@ def load_chroma():
     global CHROMA_CLIENT, EMBEDDER
 
     if CHROMA_CLIENT is None:
+        from pathlib import Path
+        db_path = Path(__file__).resolve().parent.parent / "Models" / "law_chroma"
         CHROMA_CLIENT = chromadb.PersistentClient(
-            path=r"D:\Fake-news-detections\RAG_LAW\Models\law_chroma"
+            path=str(db_path)
         )
 
     if EMBEDDER is None:
