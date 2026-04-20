@@ -18,9 +18,6 @@ class BGEM3Embedder:
         print(f"BGE-M3 loaded successfully. Dimension: {self.dim}")
 
     def embed_documents(self, texts: Union[str, List[str]], batch_size: int = 16) -> np.ndarray:
-        """
-        Biến danh sách bản án thành Vector để nạp vào ChromaDB.
-        """
         if isinstance(texts, str):
             texts = [texts]
             
@@ -41,14 +38,3 @@ class BGEM3Embedder:
             normalize_embeddings=True, 
             convert_to_numpy=True
         )
-
-if __name__ == "__main__":
-    embedder = BGEM3Embedder()
-    documents = [
-        "Bản án số 12/2020/HS-ST về tội trộm cắp tài sản công dân.",
-        "Quyết định của tòa án về việc tranh chấp quyền sử dụng đất đai."
-    ]
-    
-    doc_vectors = embedder.embed_documents(documents)
-    print(f"Shape của 6.000 bản án sẽ là: (6000, {embedder.dim})")
-    print(f"Kết quả test: {doc_vectors.shape}")

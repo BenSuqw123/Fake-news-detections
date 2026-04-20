@@ -4,7 +4,6 @@ import json
 import time
 from pathlib import Path
 
-# Add project root to path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from user_input_processing.claim_extractor import extract_atomic_claims
@@ -16,8 +15,8 @@ from user_input_processing.check_input import (
     HYBRID_CANDIDATE_K,
     RERANK_TOP_K
 )
-from RAG_LAW.Tranformer.search_chormadb import search_chroma
-from RAG_LAW.Tranformer.search_bm25 import search_bm25
+from user_input_processing.search_chormadb import search_chroma
+from user_input_processing.search_bm25 import search_bm25
 from user_input_processing.evaluation_layer import evaluate_evidence
 
 async def run_full_pipeline(input_text: str) -> dict:

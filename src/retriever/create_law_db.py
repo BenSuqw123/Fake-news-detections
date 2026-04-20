@@ -6,30 +6,27 @@ from pathlib import Path
 import chromadb
 from tqdm import tqdm
 import torch
-
-project_root = Path(r"/content/drive/MyDrive/Fake-news-detections")
+project_root = Path(r"D:\Fake-news-detections")
 os.chdir(project_root)
-
 sys.path.insert(0, str(project_root))
-
-try:
-    from src.retriever.embedder import BGEM3Embedder
-except ImportError:
-    print("Lỗi: Kiểm tra lại cấu trúc thư mục src/retriever/embedder.py")
-    sys.exit(1)
+from src.retriever.embedder import BGEM3Embedder
 
 def build_law_database_resumable():
     json_path = project_root / "RAG-LAW/Data/law_chunks.json"
-    db_path = str(project_root / "RAG-LAW/Models/law_chroma")
+    db_path = project_root / "RAG-LAW/Models/law_chroma"
+    if not json_path.exists():
+        print(f"Không tìm thấy file: {json_path}")
+        return
 
     with open(json_path, "r", encoding="utf-8") as f:
-        articles = json.load(f)
-    print(f"Đã tải: {len(articles)} điều luật.")
+        chunks = json.load(f)
 
-    torch.set_num_threads(4) 
+    print(f"Tổng số chunks trong file: {len(chunks)}")
+
+    torch.set_num_threads(4)
+    print("Đang khởi tạo model BGE-M3 (Device: CPU)...")
     embedder = BGEM3Embedder(device='cpu')
-    
-    client = chromadb.PersistentClient(path=db_path)
+    client = chromadb.PersistentClient(path=str(db_path))
     collection = client.get_or_create_collection(
         name="law",
         metadata={"hnsw:space": "cosine"}
@@ -37,54 +34,59 @@ def build_law_database_resumable():
 
     existing_ids = set()
     if collection.count() > 0:
-        existing_ids = set(collection.get(include=[])['ids'])
-    
-    print(f"Đã có {len(existing_ids)} bản ghi trong DB. Đang lọc dữ liệu mới...")
+        existing_ids = set(collection.get(include=[])["ids"])
 
+    print(f"Số lượng vector đã có trong DB: {len(existing_ids)}")
+
+  
     to_process = []
-    for i, item in enumerate(articles):
-        doc_id = f"law_chunk_{i}" 
+    for item in chunks:
+        doc_id = str(item["id"]) 
+
         if doc_id not in existing_ids:
-            to_process.append((doc_id, item))
+            to_process.append(item)
+
+    print(f"Cần thêm mới: {len(to_process)}")
 
     if not to_process:
-        print("Dữ liệu đã đầy đủ.")
+        print("Database đã cập nhật đầy đủ!")
         return
 
-    print(f"Cần xử lý thêm: {len(to_process)} điều luật.")
-
-    OPTIMAL_BATCH = 8 
-    
-    for i in tqdm(range(0, len(to_process), OPTIMAL_BATCH), desc="Indexing"):
-        batch = to_process[i : i + OPTIMAL_BATCH]
-        
-        batch_ids = [x[0] for x in batch]
-        batch_texts = [x[1].get("text", "") for x in batch]
-        batch_metadatas = [{
-            "title": x[1].get("law_title", "N/A"),
-            "article": x[1].get("article", "N/A"),
-            "url": x[1].get("url", "N/A"),
-            "chunk_id": x[1].get("chunk_id", 0)
-        } for x in batch]
+   
+    BATCH_SIZE = 8  
+    for i in tqdm(range(0, len(to_process), BATCH_SIZE), desc="Indexing"):
+        batch = to_process[i:i + BATCH_SIZE]
+        batch_ids = [str(x["id"]) for x in batch]
+        batch_texts = [x["text"] for x in batch] 
+        batch_metadatas = [
+            {
+                "law_title": x.get("law_title", "Không rõ"),
+                "article": x.get("article", "Không rõ"),
+                "url": x.get("url", ""),
+                "chunk_id": str(x["id"])
+            }
+            for x in batch
+        ]
 
         try:
             embeddings = embedder.embed_documents(batch_texts)
-            
+
             collection.add(
                 ids=batch_ids,
-                embeddings=embeddings.tolist(),
+                embeddings=embeddings.tolist() if hasattr(embeddings, 'tolist') else embeddings,
                 documents=batch_texts,
                 metadatas=batch_metadatas
             )
-            
-            if i % (OPTIMAL_BATCH * 10) == 0:
-                gc.collect()
-                
+
         except Exception as e:
-            print(f"\nLỗi tại batch {i}: {e}. Đang bỏ qua để tiếp tục...")
+            print(f"\nLỗi tại batch {i}: {e}")
             continue
 
-    print(f"\nTổng số bản ghi hiện tại: {collection.count()}")
+        if i % (BATCH_SIZE * 5) == 0:
+            gc.collect()
+
+    print(f"\nHOÀN THÀNH. Tổng số vector trong DB: {collection.count()}")
+
 
 if __name__ == "__main__":
     build_law_database_resumable()
