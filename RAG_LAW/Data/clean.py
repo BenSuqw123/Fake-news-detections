@@ -51,9 +51,9 @@ def clean_dataset(data):
     return cleaned, stats
 
 if __name__ == "__main__":
-    data_path = r"D:\Fake-news-detections\RAG_LAW\Data\law_articles.json"
-    output_path = r"D:\Fake-news-detections\RAG_LAW\Data\law_articles_cleaned.json"
-    report_path = r"D:\Fake-news-detections\RAG_LAW\Data\law_articles_cleaned_summary.txt"
+    data_path = r"C:\Users\User\Desktop\Fake news detection\Fake-news-detections\RAG_LAW\Data\law_articles.json"
+    output_path = r"C:\Users\User\Desktop\Fake news detection\Fake-news-detections\RAG_LAW\Data\law_articles_cleaned.json"
+    report_path = r"C:\Users\User\Desktop\Fake news detection\Fake-news-detections\RAG_LAW\Data\law_articles_cleaned_summary.txt"
 
     if os.path.exists(data_path):
         print("Đang đọc dữ liệu gốc...")

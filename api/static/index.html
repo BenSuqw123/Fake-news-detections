@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hệ thống Kiểm chứng Tin giả (RAG-LAW)</title>
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #0056b3;
+            --success: #28a745;
+            --danger: #dc3545;
+            --warning: #ffc107;
+            --text: #333;
+            --bg: #f8f9fa;
+        }
+        body {
+            font-family: 'Be Vietnam Pro', sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 2rem;
+            display: flex;
+            justify-content: center;
+        }
+        .container {
+            width: 100%;
+            max-width: 900px;
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        h1 {
+            text-align: center;
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+        }
+        p.subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 2rem;
+        }
+        textarea {
+            width: 100%;
+            height: 120px;
+            padding: 1rem;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-family: inherit;
+            font-size: 1rem;
+            resize: vertical;
+            box-sizing: border-box;
+            margin-bottom: 1rem;
+        }
+        button {
+            width: 100%;
+            padding: 1rem;
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        button:hover {
+            background-color: #004494;
+        }
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        .spinner {
+            display: none;
+            width: 24px;
+            height: 24px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+            margin: 0 auto;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        #results {
+            display: none;
+            margin-top: 2rem;
+            border-top: 2px solid #eee;
+            padding-top: 2rem;
+        }
+        .badge-container {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        .badge {
+            display: inline-block;
+            padding: 0.5rem 2rem;
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: white;
+            border-radius: 50px;
+        }
+        .badge.real { background-color: var(--success); }
+        .badge.fake { background-color: var(--danger); }
+        .badge.uncertain { background-color: var(--warning); color: #333; }
+        
+        .progress-container {
+            background: #eee;
+            border-radius: 20px;
+            height: 24px;
+            width: 100%;
+            margin: 1rem 0;
+            overflow: hidden;
+            position: relative;
+        }
+        .progress-bar {
+            height: 100%;
+            background: var(--primary);
+            transition: width 0.5s ease;
+        }
+        .progress-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 0.85rem;
+            font-weight: bold;
+            color: white;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+        }
+        .rule-text {
+            text-align: center;
+            font-size: 1.1rem;
+            color: #555;
+            margin-bottom: 2rem;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 2rem;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 0.75rem;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+            font-weight: 600;
+        }
+        .doc-section {
+            margin-bottom: 1rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .doc-header {
+            background: #f8f9fa;
+            padding: 0.75rem 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .doc-header:hover {
+            background: #e9ecef;
+        }
+        .doc-content {
+            display: none;
+            padding: 1rem;
+            background: #fff;
+            font-size: 0.9rem;
+            line-height: 1.5;
+            color: #444;
+        }
+        .doc-item {
+            margin-bottom: 0.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px dashed #ccc;
+        }
+        .doc-item:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Hệ thống Kiểm chứng Pháp lý</h1>
+    <p class="subtitle">Đánh giá mức độ tin cậy của thông tin dựa trên cơ sở dữ liệu Luật Việt Nam</p>
+
+    <textarea id="inputText" placeholder="Nhập nội dung bài báo hoặc tuyên bố cần kiểm tra..."></textarea>
+    <button id="submitBtn" onclick="verifyClaim()">
+        <span id="btnText">Kiểm tra độ tin cậy</span>
+        <div id="spinner" class="spinner"></div>
+    </button>
+
+    <div id="results">
+        <h2>Kết quả tổng hợp:</h2>
+        <div class="badge-container">
+            <div id="mainBadge" class="badge">ĐANG XỬ LÝ</div>
+        </div>
+
+        <div class="progress-container">
+            <div id="progressBar" class="progress-bar" style="width: 0%;"></div>
+            <div id="progressText" class="progress-text">Độ tin cậy: 0%</div>
+        </div>
+        
+        <p id="ruleText" class="rule-text"></p>
+
+        <h3>So sánh 3 phương pháp truy xuất:</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Phương pháp</th>
+                    <th>Phán quyết (Verdict)</th>
+                    <th>Độ tin cậy (Mô hình)</th>
+                </tr>
+            </thead>
+            <tbody id="comparisonTable">
+                <!-- Rows injected via JS -->
+            </tbody>
+        </table>
+
+        <h3>Bằng chứng tìm được (Top 3 tài liệu):</h3>
+        <div id="evidenceContainer">
+            <!-- Collapsible evidence injected via JS -->
+        </div>
+    </div>
+</div>
+
+<script>
+    async function verifyClaim() {
+        const text = document.getElementById('inputText').value.trim();
+        if (!text) {
+            alert('Vui lòng nhập nội dung cần kiểm tra!');
+            return;
+        }
+
+        const btn = document.getElementById('submitBtn');
+        const btnText = document.getElementById('btnText');
+        const spinner = document.getElementById('spinner');
+        const resultsDiv = document.getElementById('results');
+
+        // Loading state
+        btn.disabled = true;
+        btnText.style.display = 'none';
+        spinner.style.display = 'block';
+        resultsDiv.style.display = 'none';
+
+        try {
+            const response = await fetch('/verify', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text: text })
+            });
+
+            if (!response.ok) {
+                throw new Error('Lỗi kết nối đến máy chủ API.');
+            }
+
+            const data = await response.json();
+            renderResults(data);
+        } catch (error) {
+            alert('Đã xảy ra lỗi: ' + error.message);
+        } finally {
+            // Restore state
+            btn.disabled = false;
+            btnText.style.display = 'inline';
+            spinner.style.display = 'none';
+        }
+    }
+
+    function renderResults(data) {
+        const resultsDiv = document.getElementById('results');
+        resultsDiv.style.display = 'block';
+
+        // 1. Badge
+        const badge = document.getElementById('mainBadge');
+        if (data.label === 'REAL') {
+            badge.textContent = 'THẬT / CHÍNH XÁC';
+            badge.className = 'badge real';
+        } else if (data.label === 'FAKE') {
+            badge.textContent = 'GIẢ MẠO / SAI LỆCH';
+            badge.className = 'badge fake';
+        } else if (data.label === 'REJECTED' || data.label === 'ERROR') {
+            badge.textContent = 'TỪ CHỐI / LỖI';
+            badge.className = 'badge fake';
+        } else {
+            badge.textContent = 'KHÔNG XÁC ĐỊNH';
+            badge.className = 'badge uncertain';
+        }
+
+        // 2. Progress Bar
+        const scorePct = Math.round(data.truthfulness_score * 100);
+        const pBar = document.getElementById('progressBar');
+        const pText = document.getElementById('progressText');
+        pBar.style.width = scorePct + '%';
+        pText.textContent = `Độ tin cậy: ${scorePct}%`;
+        
+        if (scorePct >= 75) pBar.style.background = 'var(--success)';
+        else if (scorePct >= 50) pBar.style.background = 'var(--warning)';
+        else pBar.style.background = 'var(--danger)';
+
+        // 3. Rule Text
+        document.getElementById('ruleText').textContent = data.rule_applied;
+
+        // 4. Comparison Table
+        const tbody = document.getElementById('comparisonTable');
+        tbody.innerHTML = '';
+        data.retrieval_comparison.forEach(method => {
+            const tr = document.createElement('tr');
+            const confPct = Math.round(method.confidence * 100) + '%';
+            tr.innerHTML = `
+                <td>${method.method.toUpperCase()}</td>
+                <td><strong>${method.verdict}</strong></td>
+                <td>${confPct}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+
+        // 5. Evidence Sections
+        const evContainer = document.getElementById('evidenceContainer');
+        evContainer.innerHTML = '';
+        data.retrieval_comparison.forEach(method => {
+            const section = document.createElement('div');
+            section.className = 'doc-section';
+            
+            const docsHtml = method.top_docs.slice(0, 3).map(doc => `<div class="doc-item">${doc}</div>`).join('');
+            const contentHtml = docsHtml || '<div class="doc-item">Không tìm thấy tài liệu liên quan.</div>';
+
+            section.innerHTML = `
+                <div class="doc-header" onclick="toggleDoc(this)">
+                    <span>Bằng chứng từ phương pháp: ${method.method.toUpperCase()}</span>
+                    <span>▼</span>
+                </div>
+                <div class="doc-content">
+                    ${contentHtml}
+                </div>
+            `;
+            evContainer.appendChild(section);
+        });
+    }
+
+    function toggleDoc(header) {
+        const content = header.nextElementSibling;
+        const arrow = header.querySelector('span:last-child');
+        if (content.style.display === 'block') {
+            content.style.display = 'none';
+            arrow.textContent = '▼';
+        } else {
+            content.style.display = 'block';
+            arrow.textContent = '▲';
+        }
+    }
+</script>
+
+</body>
+</html>

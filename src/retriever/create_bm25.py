@@ -7,9 +7,9 @@ from rank_bm25 import BM25Okapi
 from underthesea import word_tokenize 
 
 def build_bm25_standalone():
-    project_root = Path(r"D:\Fake-news-detections")
-    json_path = project_root / "RAG-LAW/Data/law_chunks.json" 
-    bm25_save_path = project_root / "RAG-LAW/Models/bm25/bm25_database.pkl"
+    project_root = Path(r"C:\Users\User\Desktop\Fake news detection\Fake-news-detections")
+    json_path = project_root / "RAG_LAW/Data/law_chunks.json" 
+    bm25_save_path = project_root / "RAG_LAW/Models/bm25/bm25_database.pkl"
 
     if not json_path.exists():
         print(f"Không tìm thấy file: {json_path}")

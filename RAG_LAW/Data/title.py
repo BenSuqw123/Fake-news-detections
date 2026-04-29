@@ -1,12 +1,12 @@
 import json
 
 try:
-    with open(r'D:\Fake-news-detections\RAG-LAW\Data\law_articles_cleaned.json', 'r', encoding='utf-8') as f:
+    with open(r'C:\Users\User\Desktop\Fake news detection\Fake-news-detections\RAG_LAW\Data\law_articles_cleaned.json', 'r', encoding='utf-8') as f:
         data = json.load(f)
 
     unique_titles = sorted(list(set(item['law_title'] for item in data if 'law_title' in item)))
 
-    with open(r'D:\Fake-news-detections\RAG-LAW\Data\law_title.txt', 'w', encoding='utf-8') as f_out:
+    with open(r'C:\Users\User\Desktop\Fake news detection\Fake-news-detections\RAG_LAW\Data\law_title.txt', 'w', encoding='utf-8') as f_out:
         f_out.write("DANH SÁCH CÁC LOẠI LUẬT CÓ TRONG DỮ LIỆU\n")
         f_out.write("="*40 + "\n")
         for i, title in enumerate(unique_titles, 1):

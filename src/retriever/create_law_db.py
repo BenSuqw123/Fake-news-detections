@@ -6,14 +6,15 @@ from pathlib import Path
 import chromadb
 from tqdm import tqdm
 import torch
-project_root = Path(r"D:\Fake-news-detections")
-os.chdir(project_root)
-sys.path.insert(0, str(project_root))
-from src.retriever.embedder import BGEM3Embedder
+from src.config import PROJECT_ROOT, MODELS_DIR
 
-def build_law_database_resumable():
-    json_path = project_root / "RAG-LAW/Data/law_chunks.json"
-    db_path = project_root / "RAG-LAW/Models/law_chroma"
+def build_law_database_resumable(json_path: str = None):
+    if json_path is None:
+        json_path = PROJECT_ROOT / "RAG_LAW/Data/law_chunks.json"
+    else:
+        json_path = Path(json_path)
+        
+    db_path = MODELS_DIR / "law_chroma"
     if not json_path.exists():
         print(f"Không tìm thấy file: {json_path}")
         return

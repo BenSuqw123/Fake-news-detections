@@ -73,8 +73,8 @@ def parse_law(session, url):
     return articles
 
 def main():
-    output_json = r"D:\Fake-news-detections\RAG_LAW\Data\law_articles.json"
-    output_report = r"D:\Fake-news-detections\RAG_LAW\Data\result.txt"
+    output_json = r"C:\Users\User\Desktop\Fake news detection\Fake-news-detections\RAG_LAW\Data\law_articles.json"
+    output_report = r"C:\Users\User\Desktop\Fake news detection\Fake-news-detections\RAG_LAW\Data\result.txt"
     all_data = []
     summary_list = []
     

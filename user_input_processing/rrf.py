@@ -1,5 +1,5 @@
-from user_input_processing.search_chormadb import search_chroma
-from user_input_processing.search_bm25 import search_bm25
+from src.retriever.search_chromadb import search_chroma
+from src.retriever.search_bm25 import search_bm25
 from user_input_processing.re_ranking import apply_reranking
 
 HYBRID_CANDIDATE_K = 50
