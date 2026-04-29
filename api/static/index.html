@@ -1,364 +1,1013 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hệ thống Kiểm chứng Tin giả (RAG-LAW)</title>
-    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --primary: #0056b3;
-            --success: #28a745;
-            --danger: #dc3545;
-            --warning: #ffc107;
-            --text: #333;
-            --bg: #f8f9fa;
-        }
-        body {
-            font-family: 'Be Vietnam Pro', sans-serif;
-            background-color: var(--bg);
-            color: var(--text);
-            margin: 0;
-            padding: 2rem;
-            display: flex;
-            justify-content: center;
-        }
-        .container {
-            width: 100%;
-            max-width: 900px;
-            background: white;
-            padding: 2rem;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        }
-        h1 {
-            text-align: center;
-            color: var(--primary);
-            margin-bottom: 0.5rem;
-        }
-        p.subtitle {
-            text-align: center;
-            color: #666;
-            margin-bottom: 2rem;
-        }
-        textarea {
-            width: 100%;
-            height: 120px;
-            padding: 1rem;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            font-family: inherit;
-            font-size: 1rem;
-            resize: vertical;
-            box-sizing: border-box;
-            margin-bottom: 1rem;
-        }
-        button {
-            width: 100%;
-            padding: 1rem;
-            background-color: var(--primary);
-            color: white;
-            border: none;
-            border-radius: 4px;
-            font-size: 1.1rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-        button:hover {
-            background-color: #004494;
-        }
-        button:disabled {
-            background-color: #ccc;
-            cursor: not-allowed;
-        }
-        .spinner {
-            display: none;
-            width: 24px;
-            height: 24px;
-            border: 3px solid rgba(255,255,255,0.3);
-            border-radius: 50%;
-            border-top-color: white;
-            animation: spin 1s ease-in-out infinite;
-            margin: 0 auto;
-        }
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-        #results {
-            display: none;
-            margin-top: 2rem;
-            border-top: 2px solid #eee;
-            padding-top: 2rem;
-        }
-        .badge-container {
-            text-align: center;
-            margin-bottom: 2rem;
-        }
-        .badge {
-            display: inline-block;
-            padding: 0.5rem 2rem;
-            font-size: 1.5rem;
-            font-weight: bold;
-            color: white;
-            border-radius: 50px;
-        }
-        .badge.real { background-color: var(--success); }
-        .badge.fake { background-color: var(--danger); }
-        .badge.uncertain { background-color: var(--warning); color: #333; }
-        
-        .progress-container {
-            background: #eee;
-            border-radius: 20px;
-            height: 24px;
-            width: 100%;
-            margin: 1rem 0;
-            overflow: hidden;
-            position: relative;
-        }
-        .progress-bar {
-            height: 100%;
-            background: var(--primary);
-            transition: width 0.5s ease;
-        }
-        .progress-text {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            font-size: 0.85rem;
-            font-weight: bold;
-            color: white;
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
-        }
-        .rule-text {
-            text-align: center;
-            font-size: 1.1rem;
-            color: #555;
-            margin-bottom: 2rem;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 2rem;
-        }
-        th, td {
-            border: 1px solid #ddd;
-            padding: 0.75rem;
-            text-align: left;
-        }
-        th {
-            background-color: #f2f2f2;
-            font-weight: 600;
-        }
-        .doc-section {
-            margin-bottom: 1rem;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-        }
-        .doc-header {
-            background: #f8f9fa;
-            padding: 0.75rem 1rem;
-            font-weight: 600;
-            cursor: pointer;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .doc-header:hover {
-            background: #e9ecef;
-        }
-        .doc-content {
-            display: none;
-            padding: 1rem;
-            background: #fff;
-            font-size: 0.9rem;
-            line-height: 1.5;
-            color: #444;
-        }
-        .doc-item {
-            margin-bottom: 0.5rem;
-            padding-bottom: 0.5rem;
-            border-bottom: 1px dashed #ccc;
-        }
-        .doc-item:last-child {
-            border-bottom: none;
-            margin-bottom: 0;
-            padding-bottom: 0;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>KiểmChứng — Xác minh thông tin pháp luật Việt Nam</title>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap"
+    rel="stylesheet"
+  />
+  <style>
+    /* ═══════════════════════════════════════════
+       DESIGN TOKENS
+    ═══════════════════════════════════════════ */
+    :root {
+      --primary:     #2563EB;
+      --primary-dk:  #1D4ED8;
+      --success:     #16A34A;
+      --danger:      #DC2626;
+      --warning:     #D97706;
+      --bg:          #F8FAFC;
+      --card:        #FFFFFF;
+      --border:      #E2E8F0;
+      --text:        #1E293B;
+      --subtext:     #64748B;
+      --radius:      16px;
+      --shadow:      0 1px 3px rgba(0,0,0,.07), 0 4px 16px rgba(0,0,0,.05);
+      --shadow-hover: 0 4px 12px rgba(0,0,0,.10), 0 16px 32px rgba(0,0,0,.08);
+    }
+
+    /* ═══════════════════════════════════════════
+       RESET & BASE
+    ═══════════════════════════════════════════ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Be Vietnam Pro', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ═══════════════════════════════════════════
+       HEADER
+    ═══════════════════════════════════════════ */
+    .site-header {
+      background: linear-gradient(135deg, #1E3A5F 0%, #2563EB 100%);
+      color: #fff;
+      padding: 2rem 1.5rem 2.75rem;
+      text-align: center;
+    }
+    .header-inner { max-width: 760px; margin: 0 auto; }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      margin-bottom: 10px;
+    }
+    .brand-icon { width: 46px; height: 46px; flex-shrink: 0; }
+    .brand-name { font-size: 2.1rem; font-weight: 700; letter-spacing: -0.5px; }
+    .tagline    { font-size: 0.93rem; opacity: .88; max-width: 500px; margin: 0 auto; }
+
+    /* ═══════════════════════════════════════════
+       MAIN LAYOUT
+    ═══════════════════════════════════════════ */
+    .main-content {
+      flex: 1;
+      max-width: 960px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 2rem 1rem 3rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    /* ═══════════════════════════════════════════
+       CARD BASE
+    ═══════════════════════════════════════════ */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 1.75rem;
+    }
+
+    /* ═══════════════════════════════════════════
+       INPUT CARD
+    ═══════════════════════════════════════════ */
+    textarea {
+      width: 100%;
+      padding: 1rem;
+      border: 2px solid var(--border);
+      border-radius: 10px;
+      font-family: inherit;
+      font-size: 1rem;
+      color: var(--text);
+      resize: vertical;
+      min-height: 148px;
+      outline: none;
+      transition: border-color .2s, box-shadow .2s;
+      display: block;
+    }
+    textarea:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(37,99,235,.14);
+    }
+    textarea::placeholder { color: var(--subtext); }
+
+    .char-counter {
+      text-align: right;
+      font-size: .8rem;
+      color: var(--subtext);
+      margin-top: 5px;
+      margin-bottom: 10px;
+    }
+
+    .input-error {
+      color: var(--danger);
+      font-size: .84rem;
+      min-height: 1.1em;
+      margin-bottom: 8px;
+    }
+
+    .submit-btn {
+      width: 100%;
+      padding: .9rem 1.5rem;
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-family: inherit;
+      font-size: 1.05rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .18s, transform .12s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .submit-btn:hover:not(:disabled) {
+      background: var(--primary-dk);
+      transform: scale(1.01);
+    }
+    .submit-btn:active:not(:disabled) { transform: scale(.99); }
+    .submit-btn:disabled { background: #94A3B8; cursor: not-allowed; }
+    .submit-btn.shake { animation: shake .4s ease; }
+
+    .btn-spinner {
+      width: 18px; height: 18px;
+      border: 3px solid rgba(255,255,255,.35);
+      border-top-color: #fff;
+      border-radius: 50%;
+      display: inline-block;
+      animation: spin .8s linear infinite;
+    }
+
+    .info-hint {
+      text-align: center;
+      font-size: .82rem;
+      color: var(--subtext);
+      margin-top: 10px;
+    }
+
+    /* ═══════════════════════════════════════════
+       LOADING CARD
+    ═══════════════════════════════════════════ */
+    .loading-card { text-align: center; }
+
+    .loading-card h3 {
+      color: var(--subtext);
+      font-weight: 500;
+      font-size: .95rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .pipeline-steps {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 1.5rem;
+      text-align: left;
+    }
+
+    .pipeline-step {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 11px 16px;
+      border-radius: 10px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      font-size: .93rem;
+      color: var(--subtext);
+      opacity: 0;
+      transform: translateX(-12px);
+      transition: opacity .4s ease, transform .4s ease, background .3s, border-color .3s;
+    }
+    .pipeline-step.active {
+      opacity: 1;
+      transform: translateX(0);
+      color: var(--text);
+      background: #EFF6FF;
+      border-color: #BFDBFE;
+    }
+    .step-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--border);
+      flex-shrink: 0;
+      transition: background .4s;
+    }
+    .pipeline-step.active .step-dot { background: var(--primary); }
+
+    .elapsed-timer {
+      font-size: .9rem;
+      color: var(--subtext);
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* ═══════════════════════════════════════════
+       ERROR CARD
+    ═══════════════════════════════════════════ */
+    .error-card { background: #FFF5F5; border-color: #FECACA; }
+    .error-content { display: flex; align-items: flex-start; gap: 12px; }
+    .error-icon { font-size: 1.5rem; flex-shrink: 0; }
+    .error-message { color: var(--danger); font-size: .94rem; line-height: 1.55; }
+
+    /* ═══════════════════════════════════════════
+       VERDICT HERO
+    ═══════════════════════════════════════════ */
+    .verdict-hero { text-align: center; animation: fadeInUp .5s ease both; }
+
+    .verdict-badge {
+      display: inline-block;
+      padding: .55rem 2.5rem;
+      border-radius: 999px;
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 1.5rem;
+      letter-spacing: .04em;
+    }
+    .verdict-badge.success { background: var(--success); }
+    .verdict-badge.danger  { background: var(--danger); }
+    .verdict-badge.warning { background: var(--warning); }
+
+    .ring-wrapper {
+      position: relative;
+      width: 164px;
+      height: 164px;
+      margin: 0 auto 1.25rem;
+    }
+    .ring-svg { width: 164px; height: 164px; display: block; }
+    .ring-center {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .ring-percent {
+      font-size: 2.1rem;
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1;
+    }
+
+    .rule-text {
+      font-style: italic;
+      color: var(--subtext);
+      font-size: .91rem;
+      max-width: 580px;
+      margin: 0 auto 1rem;
+    }
+
+    .time-badge {
+      display: inline-block;
+      padding: 4px 14px;
+      border-radius: 999px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      font-size: .8rem;
+      color: var(--subtext);
+    }
+
+    /* ═══════════════════════════════════════════
+       METHODS GRID
+    ═══════════════════════════════════════════ */
+    .methods-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+    }
+
+    .method-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 1.25rem;
+      transition: transform .2s ease, box-shadow .2s ease;
+      animation: fadeInUp .5s ease both;
+    }
+    .method-card:hover {
+      transform: translateY(-4px);
+      box-shadow: var(--shadow-hover);
+    }
+
+    .method-header {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .method-name-badge { font-weight: 600; font-size: .9rem; }
+    .recommended-tag {
+      font-size: .72rem;
+      font-weight: 600;
+      background: #FEF3C7;
+      color: #92400E;
+      border: 1px solid #FDE68A;
+      border-radius: 999px;
+      padding: 2px 8px;
+    }
+
+    .verdict-pill {
+      display: inline-block;
+      padding: 3px 12px;
+      border-radius: 999px;
+      font-size: .8rem;
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
+    .verdict-pill.success { background: #DCFCE7; color: #166534; }
+    .verdict-pill.danger  { background: #FEE2E2; color: #991B1B; }
+    .verdict-pill.warning { background: #FEF3C7; color: #92400E; }
+
+    .conf-section { margin-bottom: 12px; }
+    .conf-label { font-size: .81rem; color: var(--subtext); margin-bottom: 5px; }
+    .conf-label strong { color: var(--text); }
+
+    .conf-track {
+      height: 8px;
+      background: var(--bg);
+      border-radius: 999px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+    }
+    .conf-fill {
+      height: 100%;
+      border-radius: 999px;
+      width: 0%;
+      transition: width 1.2s ease;
+    }
+    .conf-fill.success { background: var(--success); }
+    .conf-fill.danger  { background: var(--danger); }
+    .conf-fill.warning { background: var(--warning); }
+
+    /* Evidence drawer */
+    .evidence-toggle {
+      width: 100%;
+      padding: 8px 12px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: .81rem;
+      color: var(--subtext);
+      cursor: pointer;
+      text-align: left;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: background .15s, border-color .15s, color .15s;
+    }
+    .evidence-toggle:hover {
+      background: #EFF6FF;
+      border-color: #BFDBFE;
+      color: var(--primary);
+    }
+    .toggle-arrow { transition: transform .3s ease; display: inline-block; }
+    .evidence-toggle.open .toggle-arrow { transform: rotate(180deg); }
+
+    .evidence-body {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height .4s ease;
+    }
+    .evidence-body.open { max-height: 900px; }
+
+    .evidence-list {
+      list-style: decimal;
+      padding: 12px 4px 4px 22px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .evidence-item {
+      padding: 10px 12px;
+      background: var(--bg);
+      border-radius: 8px;
+      border-left: 3px solid var(--primary);
+    }
+    .evidence-source {
+      font-size: .74rem;
+      font-weight: 600;
+      color: var(--primary);
+      margin-bottom: 4px;
+    }
+    .evidence-text {
+      font-size: .81rem;
+      color: var(--subtext);
+      line-height: 1.55;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .evidence-text.expanded {
+      display: block;
+      -webkit-line-clamp: unset;
+      overflow: visible;
+    }
+    .expand-btn {
+      background: none;
+      border: none;
+      color: var(--primary);
+      font-family: inherit;
+      font-size: .74rem;
+      cursor: pointer;
+      padding: 3px 0 0;
+      font-weight: 500;
+    }
+    .expand-btn:hover { text-decoration: underline; }
+
+    .no-evidence {
+      font-size: .81rem;
+      color: var(--subtext);
+      text-align: center;
+      padding: 12px 0 4px;
+      font-style: italic;
+    }
+
+    /* Contradiction evidence (red accent) */
+    .evidence-item.contra {
+      border-left-color: var(--danger);
+    }
+    .evidence-item.contra .evidence-source {
+      color: var(--danger);
+    }
+
+    /* Evidence section header (📗 / 📕) */
+    .evidence-section-hdr {
+      font-size: .78rem;
+      font-weight: 600;
+      color: var(--subtext);
+      padding: 10px 4px 4px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .evidence-section-hdr.support { color: var(--success); }
+    .evidence-section-hdr.contra  { color: var(--danger);  }
+
+    /* Reasoning / Direct-evidence blocks */
+    .reasoning-block, .direct-ev-block {
+      margin-top: 10px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      font-size: .8rem;
+      line-height: 1.55;
+    }
+    .reasoning-block {
+      background: #F0F9FF;
+      border-left: 3px solid #7DD3FC;
+      color: #0C4A6E;
+    }
+    .direct-ev-block {
+      background: #FFF7ED;
+      border-left: 3px solid #FDBA74;
+      color: #7C2D12;
+    }
+    .reasoning-block strong, .direct-ev-block strong {
+      display: block;
+      margin-bottom: 3px;
+      font-size: .75rem;
+      opacity: .8;
+    }
+
+    /* ═══════════════════════════════════════════
+       FOOTER
+    ═══════════════════════════════════════════ */
+    .site-footer {
+      background: var(--card);
+      border-top: 1px solid var(--border);
+      padding: 1.25rem 1rem;
+      text-align: center;
+    }
+    .footer-brand {
+      font-size: .84rem;
+      font-weight: 500;
+      color: var(--text);
+      margin-bottom: 4px;
+    }
+    .footer-disclaimer { font-size: .76rem; color: var(--subtext); }
+
+    /* ═══════════════════════════════════════════
+       ANIMATIONS
+    ═══════════════════════════════════════════ */
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    @keyframes shake {
+      0%,100% { transform: translateX(0); }
+      20%      { transform: translateX(-7px); }
+      40%      { transform: translateX(7px); }
+      60%      { transform: translateX(-5px); }
+      80%      { transform: translateX(5px); }
+    }
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ═══════════════════════════════════════════
+       RESPONSIVE
+    ═══════════════════════════════════════════ */
+    @media (max-width: 768px) {
+      .brand-name          { font-size: 1.55rem; }
+      .tagline             { font-size: .85rem; }
+      .methods-grid        { grid-template-columns: 1fr; }
+      .card                { padding: 1.25rem; }
+      .verdict-badge       { font-size: 1.1rem; padding: .5rem 1.75rem; }
+    }
+  </style>
 </head>
 <body>
 
-<div class="container">
-    <h1>Hệ thống Kiểm chứng Pháp lý</h1>
-    <p class="subtitle">Đánh giá mức độ tin cậy của thông tin dựa trên cơ sở dữ liệu Luật Việt Nam</p>
-
-    <textarea id="inputText" placeholder="Nhập nội dung bài báo hoặc tuyên bố cần kiểm tra..."></textarea>
-    <button id="submitBtn" onclick="verifyClaim()">
-        <span id="btnText">Kiểm tra độ tin cậy</span>
-        <div id="spinner" class="spinner"></div>
-    </button>
-
-    <div id="results">
-        <h2>Kết quả tổng hợp:</h2>
-        <div class="badge-container">
-            <div id="mainBadge" class="badge">ĐANG XỬ LÝ</div>
-        </div>
-
-        <div class="progress-container">
-            <div id="progressBar" class="progress-bar" style="width: 0%;"></div>
-            <div id="progressText" class="progress-text">Độ tin cậy: 0%</div>
-        </div>
-        
-        <p id="ruleText" class="rule-text"></p>
-
-        <h3>So sánh 3 phương pháp truy xuất:</h3>
-        <table>
-            <thead>
-                <tr>
-                    <th>Phương pháp</th>
-                    <th>Phán quyết (Verdict)</th>
-                    <th>Độ tin cậy (Mô hình)</th>
-                </tr>
-            </thead>
-            <tbody id="comparisonTable">
-                <!-- Rows injected via JS -->
-            </tbody>
-        </table>
-
-        <h3>Bằng chứng tìm được (Top 3 tài liệu):</h3>
-        <div id="evidenceContainer">
-            <!-- Collapsible evidence injected via JS -->
-        </div>
+  <!-- ═══ HEADER ═══ -->
+  <header class="site-header">
+    <div class="header-inner">
+      <div class="brand">
+        <svg class="brand-icon" viewBox="0 0 46 46" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect width="46" height="46" rx="11" fill="rgba(255,255,255,0.18)"/>
+          <path d="M23 7 L37 12 L37 26 C37 35 30 41 23 44 C16 41 9 35 9 26 L9 12 Z"
+                fill="white" opacity="0.92"/>
+          <path d="M16 24 L21 30 L30 19"
+                stroke="#2563EB" stroke-width="3.2" fill="none"
+                stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span class="brand-name">KiểmChứng</span>
+      </div>
+      <p class="tagline">Hệ thống xác minh thông tin pháp luật Việt Nam dựa trên AI</p>
     </div>
-</div>
+  </header>
 
-<script>
+  <!-- ═══ MAIN ═══ -->
+  <main class="main-content">
+
+    <!-- INPUT CARD -->
+    <div class="card">
+      <textarea
+        id="inputText"
+        rows="6"
+        maxlength="2000"
+        placeholder="Nhập tuyên bố hoặc nội dung bài báo cần kiểm tra..."
+        oninput="updateCharCounter(this)"
+      ></textarea>
+      <div class="char-counter"><span id="charCount">0</span> / 2000</div>
+      <p id="inputError" class="input-error"></p>
+      <button id="submitBtn" class="submit-btn" onclick="verifyClaim()">
+        <span id="btnContent">🔍 Kiểm tra độ tin cậy</span>
+        <span id="btnLoading" style="display:none">
+          <span class="btn-spinner"></span>&nbsp;Đang phân tích...
+        </span>
+      </button>
+      <p class="info-hint">Hệ thống sẽ phân tích qua 3 phương pháp truy xuất song song</p>
+    </div>
+
+    <!-- LOADING CARD -->
+    <div id="loadingCard" class="card loading-card" style="display:none">
+      <h3>Đang xử lý yêu cầu của bạn</h3>
+      <div class="pipeline-steps">
+        <div class="pipeline-step" id="step1">
+          <span class="step-dot"></span>🛡️ Kiểm tra đầu vào...
+        </div>
+        <div class="pipeline-step" id="step2">
+          <span class="step-dot"></span>🔍 Trích xuất luận điểm...
+        </div>
+        <div class="pipeline-step" id="step3">
+          <span class="step-dot"></span>📚 Truy xuất văn bản pháp luật...
+        </div>
+        <div class="pipeline-step" id="step4">
+          <span class="step-dot"></span>⚖️ Đánh giá bằng chứng...
+        </div>
+      </div>
+      <div id="elapsedTimer" class="elapsed-timer">Đang xử lý... 00:00</div>
+    </div>
+
+    <!-- ERROR CARD -->
+    <div id="errorCard" class="card error-card" style="display:none">
+      <div class="error-content">
+        <span class="error-icon">⚠️</span>
+        <p id="errorMessage" class="error-message"></p>
+      </div>
+    </div>
+
+    <!-- RESULTS SECTION -->
+    <div id="resultsSection" style="display:none">
+
+      <!-- VERDICT HERO -->
+      <div class="card verdict-hero">
+        <div id="verdictBadge" class="verdict-badge"></div>
+        <div class="ring-wrapper">
+          <svg class="ring-svg" viewBox="0 0 140 140">
+            <circle cx="70" cy="70" r="54"
+                    fill="none" stroke="#E2E8F0" stroke-width="12"/>
+            <circle id="progressCircle"
+                    cx="70" cy="70" r="54"
+                    fill="none" stroke="#2563EB" stroke-width="12"
+                    stroke-linecap="round"
+                    stroke-dasharray="339.292"
+                    stroke-dashoffset="339.292"
+                    transform="rotate(-90 70 70)"/>
+          </svg>
+          <div class="ring-center">
+            <span id="ringPercent" class="ring-percent">0%</span>
+          </div>
+        </div>
+        <p id="ruleText" class="rule-text"></p>
+        <span id="timeBadge" class="time-badge"></span>
+      </div>
+
+      <!-- METHOD CARDS GRID -->
+      <div class="methods-grid" id="methodsGrid"></div>
+
+    </div>
+
+  </main>
+
+  <!-- ═══ FOOTER ═══ -->
+  <footer class="site-footer">
+    <p class="footer-brand">KiểmChứng © 2025 — Hệ thống xác minh thông tin pháp luật</p>
+    <p class="footer-disclaimer">
+      Kết quả chỉ mang tính tham khảo. Vui lòng tham khảo ý kiến chuyên gia pháp lý.
+    </p>
+  </footer>
+
+  <script>
+    /* ═══════════════════════════════════════════
+       CONSTANTS
+    ═══════════════════════════════════════════ */
+    const CIRCUMFERENCE = 2 * Math.PI * 54; // ≈ 339.292
+
+    const METHOD_INFO = {
+      bm25_only:    { label: '📝 Từ khóa (BM25)',       recommended: false },
+      semantic_only:{ label: '🧠 Ngữ nghĩa (Semantic)',  recommended: false },
+      hybrid_rrf:   { label: '🔀 Kết hợp (Hybrid RRF)', recommended: true  },
+    };
+
+    const VERDICT_MAP = {
+      SUPPORTED:    { text: '✅ Đã xác nhận',         cssClass: 'success' },
+      CONTRADICTED: { text: '❌ Mâu thuẫn',            cssClass: 'danger'  },
+      PARTIAL:      { text: '⚠️ Một phần',             cssClass: 'warning' },
+      INSUFFICIENT: { text: '⚠️ Chưa đủ bằng chứng',  cssClass: 'warning' },
+      ERROR:        { text: '❌ Lỗi xử lý',            cssClass: 'danger'  },
+    };
+
+    const LABEL_MAP = {
+      REAL:     { emoji: '✅', text: 'THẬT',           cssClass: 'success', color: '#16A34A' },
+      FAKE:     { emoji: '❌', text: 'GIẢ MẠO',        cssClass: 'danger',  color: '#DC2626' },
+      UNCERTAIN:{ emoji: '⚠️', text: 'KHÔNG XÁC ĐỊNH', cssClass: 'warning', color: '#D97706' },
+      ERROR:    { emoji: '⚠️', text: 'LỖI',            cssClass: 'danger',  color: '#DC2626' },
+      REJECTED: { emoji: '🚫', text: 'TỪ CHỐI',        cssClass: 'danger',  color: '#DC2626' },
+    };
+
+    /* ═══════════════════════════════════════════
+       STATE
+    ═══════════════════════════════════════════ */
+    let timerInterval = null;
+    let stepTimeouts  = [];
+
+    /* ═══════════════════════════════════════════
+       CHARACTER COUNTER
+    ═══════════════════════════════════════════ */
+    function updateCharCounter(el) {
+      document.getElementById('charCount').textContent = el.value.length;
+    }
+
+    /* ═══════════════════════════════════════════
+       LOADING ANIMATION
+    ═══════════════════════════════════════════ */
+    function startLoadingAnimation() {
+      ['step1', 'step2', 'step3', 'step4'].forEach((id, i) => {
+        const t = setTimeout(() => {
+          const el = document.getElementById(id);
+          if (el) el.classList.add('active');
+        }, i * 800);
+        stepTimeouts.push(t);
+      });
+    }
+
+    function resetLoadingSteps() {
+      stepTimeouts.forEach(clearTimeout);
+      stepTimeouts = [];
+      ['step1', 'step2', 'step3', 'step4'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.classList.remove('active');
+      });
+    }
+
+    /* ═══════════════════════════════════════════
+       ELAPSED TIMER
+    ═══════════════════════════════════════════ */
+    function startTimer() {
+      const start = Date.now();
+      timerInterval = setInterval(() => {
+        const secs = Math.floor((Date.now() - start) / 1000);
+        const mm = String(Math.floor(secs / 60)).padStart(2, '0');
+        const ss = String(secs % 60).padStart(2, '0');
+        const el = document.getElementById('elapsedTimer');
+        if (el) el.textContent = 'Đang xử lý... ' + mm + ':' + ss;
+      }, 1000);
+    }
+
+    function stopTimer() {
+      clearInterval(timerInterval);
+      timerInterval = null;
+    }
+
+    /* ═══════════════════════════════════════════
+       UI STATE TOGGLE
+    ═══════════════════════════════════════════ */
+    function setLoadingState(on) {
+      document.getElementById('submitBtn').disabled     = on;
+      document.getElementById('btnContent').style.display = on ? 'none'   : 'inline';
+      document.getElementById('btnLoading').style.display = on ? 'inline' : 'none';
+      document.getElementById('loadingCard').style.display = on ? 'block' : 'none';
+      document.getElementById('resultsSection').style.display = 'none';
+      document.getElementById('errorCard').style.display      = 'none';
+
+      if (on) {
+        resetLoadingSteps();
+        startLoadingAnimation();
+        startTimer();
+      } else {
+        stopTimer();
+      }
+    }
+
+    /* ═══════════════════════════════════════════
+       INPUT VALIDATION
+    ═══════════════════════════════════════════ */
+    function validateInput(text) {
+      const errEl = document.getElementById('inputError');
+      if (!text) {
+        errEl.textContent = 'Vui lòng nhập nội dung cần kiểm tra.';
+        shakeBtn();
+        return false;
+      }
+      if (text.length < 10) {
+        errEl.textContent = 'Nội dung quá ngắn. Vui lòng nhập ít nhất 10 ký tự.';
+        shakeBtn();
+        return false;
+      }
+      errEl.textContent = '';
+      return true;
+    }
+
+    function shakeBtn() {
+      const btn = document.getElementById('submitBtn');
+      btn.classList.remove('shake');
+      void btn.offsetWidth;
+      btn.classList.add('shake');
+      btn.addEventListener('animationend', () => btn.classList.remove('shake'), { once: true });
+    }
+
+    /* ═══════════════════════════════════════════
+       MAIN SUBMIT
+    ═══════════════════════════════════════════ */
     async function verifyClaim() {
-        const text = document.getElementById('inputText').value.trim();
-        if (!text) {
-            alert('Vui lòng nhập nội dung cần kiểm tra!');
-            return;
+      const text = document.getElementById('inputText').value.trim();
+      if (!validateInput(text)) return;
+
+      setLoadingState(true);
+
+      try {
+        const resp = await fetch('/verify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text }),
+        });
+
+        if (!resp.ok) {
+          throw new Error('Lỗi máy chủ (HTTP ' + resp.status + ')');
         }
 
-        const btn = document.getElementById('submitBtn');
-        const btnText = document.getElementById('btnText');
-        const spinner = document.getElementById('spinner');
-        const resultsDiv = document.getElementById('results');
+        const data = await resp.json();
 
-        // Loading state
-        btn.disabled = true;
-        btnText.style.display = 'none';
-        spinner.style.display = 'block';
-        resultsDiv.style.display = 'none';
-
-        try {
-            const response = await fetch('/verify', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ text: text })
-            });
-
-            if (!response.ok) {
-                throw new Error('Lỗi kết nối đến máy chủ API.');
-            }
-
-            const data = await response.json();
-            renderResults(data);
-        } catch (error) {
-            alert('Đã xảy ra lỗi: ' + error.message);
-        } finally {
-            // Restore state
-            btn.disabled = false;
-            btnText.style.display = 'inline';
-            spinner.style.display = 'none';
+        if (data.label === 'ERROR' || data.label === 'REJECTED') {
+          showError(data.rule_applied || 'Có lỗi xảy ra trong quá trình xử lý.');
+        } else {
+          renderResults(data);
         }
+
+      } catch (err) {
+        if (err instanceof TypeError) {
+          showError('Không thể kết nối đến máy chủ. Vui lòng thử lại.');
+        } else {
+          showError(err.message);
+        }
+      } finally {
+        setLoadingState(false);
+      }
     }
 
+    /* ═══════════════════════════════════════════
+       ERROR DISPLAY
+    ═══════════════════════════════════════════ */
+    function showError(msg) {
+      document.getElementById('errorMessage').textContent = msg;
+      document.getElementById('errorCard').style.display      = 'block';
+      document.getElementById('resultsSection').style.display = 'none';
+      document.getElementById('errorCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    /* ═══════════════════════════════════════════
+       RESULTS RENDER
+    ═══════════════════════════════════════════ */
     function renderResults(data) {
-        const resultsDiv = document.getElementById('results');
-        resultsDiv.style.display = 'block';
+      const labelInfo = LABEL_MAP[data.label] || LABEL_MAP.UNCERTAIN;
 
-        // 1. Badge
-        const badge = document.getElementById('mainBadge');
-        if (data.label === 'REAL') {
-            badge.textContent = 'THẬT / CHÍNH XÁC';
-            badge.className = 'badge real';
-        } else if (data.label === 'FAKE') {
-            badge.textContent = 'GIẢ MẠO / SAI LỆCH';
-            badge.className = 'badge fake';
-        } else if (data.label === 'REJECTED' || data.label === 'ERROR') {
-            badge.textContent = 'TỪ CHỐI / LỖI';
-            badge.className = 'badge fake';
-        } else {
-            badge.textContent = 'KHÔNG XÁC ĐỊNH';
-            badge.className = 'badge uncertain';
-        }
+      // Hero badge
+      const badgeEl = document.getElementById('verdictBadge');
+      badgeEl.textContent = labelInfo.emoji + ' ' + labelInfo.text;
+      badgeEl.className   = 'verdict-badge ' + labelInfo.cssClass;
 
-        // 2. Progress Bar
-        const scorePct = Math.round(data.truthfulness_score * 100);
-        const pBar = document.getElementById('progressBar');
-        const pText = document.getElementById('progressText');
-        pBar.style.width = scorePct + '%';
-        pText.textContent = `Độ tin cậy: ${scorePct}%`;
-        
-        if (scorePct >= 75) pBar.style.background = 'var(--success)';
-        else if (scorePct >= 50) pBar.style.background = 'var(--warning)';
-        else pBar.style.background = 'var(--danger)';
+      // Rule text & time badge
+      document.getElementById('ruleText').textContent  = data.rule_applied || '';
+      document.getElementById('timeBadge').textContent = '⏱️ Xử lý trong ' + formatTime(data.processing_time_ms);
 
-        // 3. Rule Text
-        document.getElementById('ruleText').textContent = data.rule_applied;
+      // Ring animation
+      animateRing(data.truthfulness_score, labelInfo.color);
 
-        // 4. Comparison Table
-        const tbody = document.getElementById('comparisonTable');
-        tbody.innerHTML = '';
-        data.retrieval_comparison.forEach(method => {
-            const tr = document.createElement('tr');
-            const confPct = Math.round(method.confidence * 100) + '%';
-            tr.innerHTML = `
-                <td>${method.method.toUpperCase()}</td>
-                <td><strong>${method.verdict}</strong></td>
-                <td>${confPct}</td>
-            `;
-            tbody.appendChild(tr);
+      // Method cards
+      const grid = document.getElementById('methodsGrid');
+      grid.innerHTML = (data.retrieval_comparison || [])
+        .map((m, i) => buildMethodCard(m, i))
+        .join('');
+
+      // Show section
+      document.getElementById('resultsSection').style.display = 'block';
+
+      // Animate confidence bars after paint
+      requestAnimationFrame(() => {
+        document.querySelectorAll('.conf-fill[data-target]').forEach(el => {
+          el.style.width = el.dataset.target;
         });
+      });
 
-        // 5. Evidence Sections
-        const evContainer = document.getElementById('evidenceContainer');
-        evContainer.innerHTML = '';
-        data.retrieval_comparison.forEach(method => {
-            const section = document.createElement('div');
-            section.className = 'doc-section';
-            
-            const docsHtml = method.top_docs.slice(0, 3).map(doc => `<div class="doc-item">${doc}</div>`).join('');
-            const contentHtml = docsHtml || '<div class="doc-item">Không tìm thấy tài liệu liên quan.</div>';
-
-            section.innerHTML = `
-                <div class="doc-header" onclick="toggleDoc(this)">
-                    <span>Bằng chứng từ phương pháp: ${method.method.toUpperCase()}</span>
-                    <span>▼</span>
-                </div>
-                <div class="doc-content">
-                    ${contentHtml}
-                </div>
-            `;
-            evContainer.appendChild(section);
-        });
+      // Smooth scroll to results
+      document.getElementById('resultsSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 
-    function toggleDoc(header) {
-        const content = header.nextElementSibling;
-        const arrow = header.querySelector('span:last-child');
-        if (content.style.display === 'block') {
-            content.style.display = 'none';
-            arrow.textContent = '▼';
-        } else {
-            content.style.display = 'block';
-            arrow.textContent = '▲';
-        }
-    }
-</script>
+    /* ═══════════════════════════════════════════
+       SVG RING ANIMATION
+    ═══════════════════════════════════════════ */
+    function animateRing(score, color) {
+      const circle = document.getElementById('progressCircle');
+      const pctEl  = document.getElementById('ringPercent');
+      const target = Math.round(score * 100);
 
+      // Reset without transition
+      circle.style.transition       = 'none';
+      circle.style.stroke           = color;
+      circle.style.strokeDashoffset = String(CIRCUMFERENCE);
+      pctEl.textContent = '0%';
+
+      // Force reflow, then animate
+      circle.getBoundingClientRect();
+      circle.style.transition       = 'stroke-dashoffset 1.5s ease';
+      circle.style.strokeDashoffset = String(CIRCUMFERENCE * (1 - score));
+
+      // Animated percentage counter (ease-out cubic)
+      const duration = 1500;
+      const t0 = Date.now();
+      function tick() {
+        const p    = Math.min((Date.now() - t0) / duration, 1);
+        const ease = 1 - Math.pow(1 - p, 3);
+        pctEl.textContent = Math.round(ease * target) + '%';
+        if (p < 1) requestAnimationFrame(tick);
+      }
+      requestAnimationFrame(tick);
+    }
+
+    /* ═══════════════════════════════════════════
+       METHOD CARD BUILDER
+    ═══════════════════════════════════════════ */
+    function buildMethodCard(method, index) {
+      const info    = METHOD_INFO[method.method] || { label: method.method, recommended: false };
+      const vInfo   = VERDICT_MAP[method.verdict] || VERDICT_MAP.INSUFFICIENT;
+      const confPct = Math.round(method.confidence * 100);
+
+      // ── Evidence lists ──────────────────────────────────────────────────
+      const supportDocs = method.support_docs && method.support_docs.length
+        ? method.support_docs
+        : method.top_docs || [];
+      const contraDocs  = method.contra_docs  || [];
+
+      function buildItems(docs, isContra) {
+        if (!docs.length) return '<p class="no-evidence">Không tìm thấy.</p>';
+        return '<ol class="evidence-list">' +
+          docs.slice(0, 5).map((doc, i) => {
+            const parsed = parseDoc(doc);
+            const uid    = method.method + (isContra ? '_c' : '_s') + '_' + i;
+            const cls    = isContra ? 'evidence-item contra' : 'evidence-item';
+            return (
+              '<li class="' + cls + '">' +
+                (parsed.source ? '<div class="evidence-source">' + escHtml(parsed.source) + '</div>' : '') +
+                '<div class="evidence-text" id="et_' + uid + '">' + escHtml(parsed.content) + '</div>' +
+                '<button class="expand-btn" onclick="expandText(this,\'et_' + uid + '\')">Xem thêm</button>' +
+              '</li>'
+            );
+          }).join('') +
+        '</ol>';
+      }
+
+      const totalCount = supportDocs.length + contraDocs.length;
+
+      // ── Reasoning + Direct evidence ─────────────────────────────────────
+      const reasoningHtml = method.reasoning
+        ? '<div class="reasoning-block"><strong>⚖️ Lý luận của AI:</strong>' + escHtml(method.reasoning) + '</div>'
+        : '';
+
+      const directEvHtml = method.direct_evidence
+        ? '<div class="direct-ev-block"><strong>🔍 Điều khoản trực tiếp:</strong>' + escHtml(method.direct_evidence) + '</div>'
+        : '<div class="direct-ev-block"><strong>🔍 Điều khoản trực tiếp:</strong><em>Không tìm thấy điều khoản trực tiếp.</em></div>';
+
+      return (
+        '<div class="method-card" style="animation-delay:' + (index * 100) + 'ms">' +
+          '<div class="method-header">' +
+            '<span class="method-name-badge">' + info.label + '</span>' +
+            (info.recommended ? '<span class="recommended-tag">⭐ Khuyến nghị</span>' : '') +
+          '</div>' +
+          '<div><span class="verdict-pill ' + vInfo.cssClass + '">' + vInfo.text + '</span></div>' +
+          '<div class="conf-section">' +
+            '<div class="conf-label">Độ tin cậy: <strong>' + confPct + '%</strong></div>' +
+            '<div class="conf-track">' +
+              '<div class="conf-fill ' + vInfo.cssClass + '" data-target="' + confPct + '%"></div>' +
+            '</div>' +
+          '</div>' +
+          '<button class="evidence-toggle" onclick="toggleEvidence(this)">' +
+            'Xem bằng chứng (' + totalCount + ') <span class="toggle-arrow">▼</span>' +
+          '</button>' +
+          '<div class="evidence-body">' +
+            '<div class="evidence-section-hdr support">📗 Bằng chứng ủng hộ (' + supportDocs.length + ')</div>' +
+            buildItems(supportDocs, false) +
+            '<div class="evidence-section-hdr contra">📕 Bằng chứng phủ nhận (' + contraDocs.length + ')</div>' +
+            buildItems(contraDocs, true) +
+            reasoningHtml +
+            directEvHtml +
+          '</div>' +
+        '</div>'
+      );
+    }
+
+    /* ═══════════════════════════════════════════
+       INTERACTIONS
+    ═══════════════════════════════════════════ */
+    function toggleEvidence(btn) {
+      btn.classList.toggle('open');
+      btn.nextElementSibling.classList.toggle('open');
+    }
+
+    function expandText(btn, id) {
+      const el = document.getElementById(id);
+      el.classList.toggle('expanded');
+      btn.textContent = el.classList.contains('expanded') ? 'Thu gọn' : 'Xem thêm';
+    }
+
+    /* ═══════════════════════════════════════════
+       HELPERS
+    ═══════════════════════════════════════════ */
+    function parseDoc(str) {
+      const m = str.match(/^\[(.+?)\]:\s*([\s\S]*)/);
+      return m ? { source: m[1], content: m[2] } : { source: null, content: str };
+    }
+
+    function formatTime(ms) {
+      const secs = Math.floor(ms / 1000);
+      if (secs < 60) return secs + 's';
+      return Math.floor(secs / 60) + 'm ' + String(secs % 60).padStart(2, '0') + 's';
+    }
+
+    function escHtml(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+  </script>
 </body>
 </html>

@@ -2,56 +2,42 @@ from __future__ import annotations
 from typing import List, Sequence
 import numpy as np
 
-DEFAULT_RERANK_MODEL = "BAAI/bge-reranker-v2-m3"
-
-
-class BGEReranker:
-    def __init__(self, model_name: str = DEFAULT_RERANK_MODEL):
-        from sentence_transformers import CrossEncoder
-
-        self.model_name = model_name
-        self.model = CrossEncoder(model_name)
-
-    def score(self, query: str, documents: Sequence[str]) -> List[float]:
-        if not documents:
-            return []
-
-        pairs = [[query, doc] for doc in documents]
-        scores = self.model.predict(pairs, show_progress_bar=False)
-        return np.asarray(scores, dtype=float).tolist()
-
-
-_RERANKER: BGEReranker | None = None
-
-
-def load_reranker() -> BGEReranker:
-    global _RERANKER
-    if _RERANKER is None:
-        _RERANKER = BGEReranker()
-    return _RERANKER
-
 
 def sigmoid_normalize(score: float) -> float:
     return float(1.0 / (1.0 + np.exp(-score)))
 
 
+def _bm25_normalize(score: float) -> float:
+    """Map raw BM25 score (0–∞) to 0–1. Typical range 0–15; score=5 → ~0.73."""
+    return sigmoid_normalize(0.5 * (score - 3.0))
+
+
 def rerank_documents(query: str, docs: Sequence[dict], top_k: int | None = None) -> List[dict]:
+    """
+    Score-based pseudo-rerank: no CrossEncoder (avoids 2.3 GB OOM on limited RAM).
+    Uses rrf_score > normalized_score > BM25 raw score, all mapped to 0–1.
+    """
     if not docs:
         return []
 
-    reranker = load_reranker()
-    texts = [doc.get("text", "") for doc in docs]
-    raw_scores = reranker.score(query, texts)
-
-    reranked_docs: List[dict] = []
-    for doc, raw_score in zip(docs, raw_scores):
+    reranked: List[dict] = []
+    for doc in docs:
         item = dict(doc)
-        item["rerank_raw_score"] = float(raw_score)
-        item["rerank_score"] = sigmoid_normalize(float(raw_score))
-        reranked_docs.append(item)
+        if "rrf_score" in item:
+            # RRF scores are small (0.01–0.03); scale to 0–1 with sigmoid
+            item["rerank_score"] = sigmoid_normalize(item["rrf_score"] * 200 - 3.0)
+        elif "normalized_score" in item:
+            item["rerank_score"] = float(item["normalized_score"])
+        else:
+            # Raw BM25 score (5–15 typical range)
+            item["rerank_score"] = _bm25_normalize(float(item.get("score", 0.0)))
+        item["rerank_raw_score"] = float(item.get("score", 0.0))
+        reranked.append(item)
 
-    reranked_docs.sort(key=lambda x: x.get("rerank_score", 0.0), reverse=True)
+    reranked.sort(key=lambda x: x["rerank_score"], reverse=True)
+    return reranked[:top_k] if top_k is not None else reranked
 
-    if top_k is not None:
-        return reranked_docs[:top_k]
-    return reranked_docs
+
+# load_reranker kept so startup pre-warm in main.py doesn't crash
+def load_reranker():
+    return None

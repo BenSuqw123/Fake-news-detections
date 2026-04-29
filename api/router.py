@@ -1,4 +1,3 @@
-import asyncio
 import time
 from fastapi import APIRouter
 from api.schemas import VerificationRequest, VerificationResult, RetrievalResult
@@ -10,84 +9,125 @@ from src.chunking import chunk_query
 
 router = APIRouter()
 
+
+def _format_doc_list(docs: list) -> list[str]:
+    """Convert raw doc dicts to display strings. Handles dict or plain str."""
+    out = []
+    for d in (docs or []):
+        if isinstance(d, dict):
+            meta  = d.get("metadata") or {}
+            title = meta.get("law_title", "Văn bản")
+            art   = meta.get("article",   "?")
+            text  = d.get("text", "")
+            out.append(f"[{title} - Điều {art}]: {text}")
+        else:
+            out.append(str(d))
+    return out
+
+
 @router.post("/verify", response_model=VerificationResult)
 async def verify_claim(request: VerificationRequest):
     start_time = time.time()
-    
-    # Pre-extract claims so we don't repeat the LLM call 3 times
+
+    # ── Step 1: Guardrail (run once, shared across all 3 methods) ─────────────
     guardrail = await check_input_validity(request.text)
     if guardrail["status"] == "REJECT":
-        # Return a rejected result
         return VerificationResult(
-            input_text=request.text,
-            retrieval_comparison=[],
-            final_verdict="ERROR",
-            truthfulness_score=0.0,
-            label="REJECTED",
-            rule_applied=guardrail["message"],
-            processing_time_ms=int((time.time() - start_time) * 1000)
-        )
-        
-    clean_query = guardrail.get("clean_query", request.text)
-    input_chunks = chunk_query(clean_query)
-    
-    all_claims = []
-    for chunk in input_chunks:
-        results = await extract_atomic_claims(chunk)
-        all_claims.extend(results)
-        
-    if not all_claims:
-        return VerificationResult(
-            input_text=request.text,
-            retrieval_comparison=[],
-            final_verdict="ERROR",
-            truthfulness_score=0.0,
-            label="ERROR",
-            rule_applied="Không tìm thấy ý định pháp lý.",
-            processing_time_ms=int((time.time() - start_time) * 1000)
+            input_text            = request.text,
+            retrieval_comparison  = [],
+            final_verdict         = "ERROR",
+            truthfulness_score    = 0.0,
+            label                 = "REJECTED",
+            rule_applied          = guardrail["message"],
+            processing_time_ms    = int((time.time() - start_time) * 1000),
         )
 
-    # 1. Run 3 retrieval modes in parallel
-    modes = ["bm25_only", "semantic_only", "hybrid_rrf"]
-    tasks = [run_pipeline(request.text, mode, pre_extracted_claims=all_claims) for mode in modes]
-    results = await asyncio.gather(*tasks, return_exceptions=True)
-    
+    clean_query = guardrail.get("clean_query", request.text)
+
+    # ── Step 2: Claim extraction (run once, shared) ───────────────────────────
+    all_claims = []
+    for chunk in chunk_query(clean_query):
+        all_claims.extend(await extract_atomic_claims(chunk))
+
+    if not all_claims:
+        return VerificationResult(
+            input_text            = request.text,
+            retrieval_comparison  = [],
+            final_verdict         = "ERROR",
+            truthfulness_score    = 0.0,
+            label                 = "ERROR",
+            rule_applied          = "Không tìm thấy ý định pháp lý.",
+            processing_time_ms    = int((time.time() - start_time) * 1000),
+        )
+
+    # ── Step 3: Run 3 retrieval modes sequentially ───────────────────────────
+    # (CPU-only; sequential avoids competing Ollama requests)
+    methods = ["bm25_only", "semantic_only", "hybrid_rrf"]
+    raw_results = []
+    for method in methods:
+        result = await run_pipeline(
+            request.text,
+            method,
+            pre_extracted_claims=all_claims,
+        )
+        raw_results.append(result)
+
+    # ── Step 4: Build RetrievalResult objects (now with evidence fields) ──────
     retrieval_results = []
-    for mode, r in zip(modes, results):
+    for method, r in zip(methods, raw_results):
         if isinstance(r, Exception):
-            retrieval_results.append(RetrievalResult(
-                method=mode, top_docs=[], verdict="ERROR", confidence=0.0
-            ))
+            retrieval_results.append(
+                RetrievalResult(
+                    method     = method,
+                    top_docs   = [],
+                    verdict    = "ERROR",
+                    confidence = 0.0,
+                )
+            )
         else:
-            retrieval_results.append(RetrievalResult(
-                method=mode,
-                top_docs=r.get("top_docs", []),
-                verdict=r.get("verdict", "INSUFFICIENT"),
-                confidence=r.get("confidence", 0.0)
-            ))
-            
-    # 2. Aggregate and Score
-    scoring_result = compute_truthfulness_score(retrieval_results)
-    
-    # Find the most authoritative final verdict
-    verdicts = [r.verdict for r in retrieval_results if r.verdict != "ERROR"]
-    if "CONTRADICTED" in verdicts:
-        final_verdict = "CONTRADICTED"
-    elif "SUPPORTED" in verdicts:
+            retrieval_results.append(
+                RetrievalResult(
+                    method          = method,
+                    top_docs        = r.get("top_docs", []),
+                    verdict         = r.get("verdict", "INSUFFICIENT"),
+                    confidence      = float(r.get("confidence", 0.0)),
+                    support_docs    = _format_doc_list(r.get("support_docs", [])),
+                    contra_docs     = _format_doc_list(r.get("contra_docs",  [])),
+                    direct_evidence = r.get("direct_evidence"),
+                    reasoning       = (r.get("details") or [{}])[0].get("reasoning"),
+                )
+            )
+
+    # ── Step 5: Aggregate truthfulness score ──────────────────────────────────
+    hybrid_result = next(
+        (r for r in retrieval_results if r.method == "hybrid_rrf"), None
+    )
+    hybrid_direct_evidence = hybrid_result.direct_evidence if hybrid_result else None
+
+    scoring_result = compute_truthfulness_score(
+        retrieval_results,
+        hybrid_direct_evidence=hybrid_direct_evidence,
+    )
+
+    # ── Step 6: Final verdict derived from label — single source of truth ─────
+    label        = scoring_result["label"]
+    all_verdicts = [r.verdict for r in retrieval_results]
+
+    if label == "REAL":
         final_verdict = "SUPPORTED"
-    elif "PARTIAL" in verdicts:
-        final_verdict = "PARTIAL"
+    elif label == "FAKE":
+        final_verdict = "CONTRADICTED" if "CONTRADICTED" in all_verdicts else "INSUFFICIENT"
+    elif label == "UNCERTAIN":
+        final_verdict = "PARTIAL" if "PARTIAL" in all_verdicts else "INSUFFICIENT"
     else:
-        final_verdict = "INSUFFICIENT"
-        
-    processing_time_ms = int((time.time() - start_time) * 1000)
-    
+        final_verdict = "ERROR"
+
     return VerificationResult(
-        input_text=request.text,
-        retrieval_comparison=retrieval_results,
-        final_verdict=final_verdict,
-        truthfulness_score=scoring_result["score"],
-        label=scoring_result["label"],
-        rule_applied=scoring_result["rule_applied"],
-        processing_time_ms=processing_time_ms
+        input_text            = request.text,
+        retrieval_comparison  = retrieval_results,
+        final_verdict         = final_verdict,
+        truthfulness_score    = scoring_result["score"],
+        label                 = scoring_result["label"],
+        rule_applied          = scoring_result["rule_applied"],
+        processing_time_ms    = int((time.time() - start_time) * 1000),
     )

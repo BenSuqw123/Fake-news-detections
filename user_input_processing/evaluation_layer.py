@@ -1,97 +1,221 @@
+"""
+evaluation_layer.py
+===================
+LLM-based claim evaluation using supporting AND contradicting evidence.
+
+Key design choices:
+- System/user message split: static instructions in system role, dynamic data in user role.
+- direct_evidence is validated against retrieved docs to prevent hallucination.
+- Confidence is the LLM's own 0-1 score grounded by best_rerank (geometric mean).
+- evaluate_final() accepts optional contra_docs (default [] for backward compat).
+"""
+import re
 import json
 import ollama
 import asyncio
+from typing import Optional
 
-# --- PROMPT ĐIỀU KHIỂN CHI TIẾT ---
-EVALUATION_SYSTEM_PROMPT = """Bạn là chuyên gia thẩm định pháp lý của hệ thống Fact-checking.
-Nhiệm vụ: Kiểm chứng TUYÊN BỐ dựa trên TÀI LIỆU được cung cấp.
+# ── System message — static instructions only, no claim data ──────────────────
+SYSTEM_INSTRUCTIONS = """Bạn là chuyên gia pháp lý Việt Nam với 20 năm kinh nghiệm.
+Nhiệm vụ của bạn là đánh giá xem một tuyên bố có được xác nhận bởi các văn bản pháp luật hay không.
 
-QUY TẮC:
-1. VERDICT: 
-   - SUPPORTED: Tài liệu khẳng định tuyên bố.
-   - CONTRADICTED: Tài liệu phủ nhận tuyên bố.
-   - INSUFFICIENT: Không đủ thông tin hoặc tài liệu không liên quan.
-   - PARTIAL: Đúng một phần nhưng thiếu các vế quan trọng.
-2. REASON: Phải giải thích dựa trên số Điều/Khoản và tên văn bản luật.
+QUY TRÌNH BẮT BUỘC (thực hiện theo thứ tự, không bỏ qua bước nào):
 
-OUTPUT JSON ONLY:
+Bước 1 — Đọc kỹ TUYÊN BỐ: Xác định chính xác tuyên bố đang nói về quyền/nghĩa vụ/quy định GÌ.
+
+Bước 2 — Kiểm tra từng BẰNG CHỨNG ỦNG HỘ:
+- Bằng chứng này có TRỰC TIẾP xác nhận đúng nội dung tuyên bố không?
+- "Trực tiếp" = điều khoản đó nói rõ về đúng quyền/nghĩa vụ được đề cập trong tuyên bố
+- Cùng chủ đề chung KHÔNG tính là bằng chứng trực tiếp
+- Ví dụ: tuyên bố về "quyền lập đảng" → Điều 15 "quyền công dân" là KHÔNG trực tiếp
+
+Bước 3 — Kiểm tra từng BẰNG CHỨNG PHỦ NHẬN:
+- Bằng chứng này có TRỰC TIẾP mâu thuẫn với tuyên bố không?
+- Ghi rõ: điều khoản nào mâu thuẫn và tại sao
+
+Bước 4 — Kết luận theo đúng logic sau:
+- Có bằng chứng ủng hộ TRỰC TIẾP + không có mâu thuẫn → SUPPORTED
+- Có bằng chứng mâu thuẫn TRỰC TIẾP → CONTRADICTED
+- Có bằng chứng ủng hộ một phần VÀ mâu thuẫn một phần → PARTIAL
+- KHÔNG có bằng chứng nào trực tiếp xác nhận → INSUFFICIENT
+
+LUẬT QUAN TRỌNG NHẤT:
+- "Không tìm thấy bằng chứng phủ nhận" KHÔNG có nghĩa là tuyên bố đúng
+- Chỉ SUPPORTED khi tìm được điều khoản NÓI RÕ về đúng nội dung tuyên bố
+- Nếu tuyên bố về quyền X nhưng không tìm thấy điều khoản nào quy định quyền X → INSUFFICIENT
+- Nếu tuyên bố sai tên chức danh, sai tên cơ quan, sai quy trình → CONTRADICTED
+
+Trả lời CHỈ bằng JSON, không thêm bất kỳ text nào khác:
 {
-  "verdict": "SUPPORTED/CONTRADICTED/INSUFFICIENT/PARTIAL",
-  "agreement_score": 0.0-1.0,
-  "coverage_score": 0.0-1.0,
-  "conflict_detected": false,
-  "evidence": "Trích dẫn đoạn văn bản gốc.",
-  "reason": "Giải thích logic chi tiết tại đây."
+  "verdict": "SUPPORTED|CONTRADICTED|PARTIAL|INSUFFICIENT",
+  "confidence": <float 0.0-1.0>,
+  "reasoning": "<2-3 câu tiếng Việt giải thích: bằng chứng nào trực tiếp xác nhận/phủ nhận và tại sao>",
+  "direct_evidence": "<tên điều khoản cụ thể VÀ trích dẫn ngắn nội dung, hoặc null nếu không có>"
 }"""
 
-def calculate_hybrid_confidence(best_rerank, llm_output):
-    """Công thức 80% Rerank + 20% LLM Logic"""
-    # Tính điểm logic của LLM (0-1)
-    llm_logic = float(llm_output.get("coverage_score", 0.0))
-    if llm_output.get("conflict_detected", False):
-        llm_logic *= float(llm_output.get("agreement_score", 0.5))
-        
-    # Phạt theo Verdict
-    multipliers = {"SUPPORTED": 1.0, "CONTRADICTED": 1.0, "PARTIAL": 0.6, "INSUFFICIENT": 0.0}
-    llm_score = llm_logic * multipliers.get(llm_output.get("verdict"), 0.0)
-    
-    # Tổng hợp 80/20
-    final_score = (0.8 * best_rerank) + (0.2 * llm_score)
-    return round(final_score * 100, 2)
 
-async def evaluate_final(claim: str, docs: list) -> dict:
-    """Hàm duy nhất dùng cho toàn bộ hệ thống"""
-    # 1. Kiểm tra tài liệu thô
+def _format_docs(docs: list) -> str:
+    """Convert doc-dict list to a labelled paragraph string for the prompt."""
+    if not docs:
+        return "(Không có bằng chứng)"
+    lines = []
+    for d in docs:
+        if isinstance(d, dict):
+            meta  = d.get("metadata") or {}
+            title = meta.get("law_title", "Văn bản")
+            art   = meta.get("article",   "?")
+            text  = d.get("text", "")
+            lines.append(f"[{title} - Điều {art}]: {text}")
+        else:
+            lines.append(str(d))
+    return "\n\n".join(lines)
+
+
+def build_user_message(claim: str, support_text: str, contra_text: str) -> str:
+    """Build the dynamic user message with claim and pre-formatted evidence text."""
+    return (
+        f"TUYÊN BỐ CẦN KIỂM TRA:\n{claim}\n\n"
+        f"BẰNG CHỨNG ỦNG HỘ (các điều khoản có thể liên quan):\n{support_text}\n\n"
+        f"BẰNG CHỨNG PHỦ NHẬN (các điều khoản có thể mâu thuẫn):\n{contra_text}"
+    )
+
+
+def validate_direct_evidence(direct_evidence: str | None, support_text: str) -> str | None:
+    """
+    Verify that the LLM-cited evidence actually appears in the retrieved docs.
+    Prevents hallucination from bypassing the INSUFFICIENT safety check.
+    """
+    if not direct_evidence:
+        return None
+
+    cited_articles = re.findall(r'Điều\s+\d+', direct_evidence, re.IGNORECASE)
+
+    if not cited_articles:
+        return None
+
+    for article in cited_articles:
+        article_num = re.search(r'\d+', article).group()
+        if f"Điều {article_num}" in support_text or f"Điều {article_num}]" in support_text:
+            return direct_evidence
+
+    return None
+
+
+def calculate_confidence(best_rerank: float, llm_confidence: float) -> float:
+    """
+    Ground the LLM's self-reported confidence with retrieval quality.
+    Uses geometric mean so either factor = 0 collapses the score.
+    """
+    return round((best_rerank * llm_confidence) ** 0.5, 4)
+
+
+async def evaluate_final(
+    claim: str,
+    docs: list,
+    contra_docs: Optional[list] = None,
+) -> dict:
+    """
+    Evaluate a single claim against supporting + contradicting evidence.
+
+    Parameters
+    ----------
+    claim       : The claim string to evaluate.
+    docs        : Supporting docs (list of dicts with 'text', 'metadata', 'rerank_score').
+    contra_docs : Contradicting docs (same format; may be empty or raw strings).
+    """
+    if contra_docs is None:
+        contra_docs = []
+
+    # ── 1. Early exit when no docs at all ─────────────────────────────────────
     if not docs:
         return _build_fallback("Không tìm thấy tài liệu liên quan trong Database.")
-        
-    best_rerank = max((d.get("rerank_score", d.get("normalized_score", 0.0)) for d in docs), default=0.0)
-    
-    # Pre-filter: Nếu điểm tìm kiếm quá thấp (< 25%), dừng luôn
-    if best_rerank < 0.25:
-        return _build_fallback(f"Độ liên quan của dữ liệu thô quá thấp ({round(best_rerank*100, 1)}%).")
 
-    # 2. Format dữ liệu cho LLM
-    formatted_context = "\n\n".join([
-        f"[Nguồn: {d.get('metadata', {}).get('law_title')} - Điều {d.get('metadata', {}).get('article')}]: {d.get('text')}"
-        for d in docs
-    ])
+    best_rerank = max(
+        (d.get("rerank_score", d.get("score", 0.0)) for d in docs),
+        default=0.0,
+    )
 
+    if best_rerank < 0.10:
+        return _build_fallback(
+            f"Độ liên quan của dữ liệu thô quá thấp ({round(best_rerank * 100, 1)}%)."
+        )
+
+    # ── 2. Format docs (computed once; reused for both prompt and validation) ──
+    support_text = _format_docs(docs)
+    contra_text  = _format_docs(contra_docs)
+
+    # ── 3. Call LLM with system/user split ────────────────────────────────────
     try:
         client = ollama.AsyncClient()
         response = await client.chat(
-            model='llama3.2',
-            messages=[
-                {'role': 'system', 'content': EVALUATION_SYSTEM_PROMPT},
-                {'role': 'user', 'content': f"TUYÊN BỐ: {claim}\n\nTÀI LIỆU:\n{formatted_context}"}
+            model   = "llama3.2",
+            messages= [
+                {"role": "system", "content": SYSTEM_INSTRUCTIONS},
+                {"role": "user",   "content": build_user_message(claim, support_text, contra_text)},
             ],
-            options={'temperature': 0},
-            format='json'
+            options = {"temperature": 0, "num_predict": 1024, "seed": 42},
+            format  = "json",
         )
-        
-        llm_res = json.loads(response['message']['content'].strip())
-        
-        # 3. Tính điểm tin cậy tổng hợp
-        conf_val = calculate_hybrid_confidence(best_rerank, llm_res)
-        
-        # 4. Đóng gói kết quả tiêu chuẩn
-        result = {
-            "verdict": llm_res.get("verdict", "INSUFFICIENT"),
-            "confidence": f"{conf_val}%",
-            "evidence": llm_res.get("evidence", "N/A"),
-            "reason": llm_res.get("reason", "AI không đưa ra lý giải cụ thể."),
-            "sufficient": conf_val >= 70.0 and llm_res.get("verdict") != "INSUFFICIENT"
-        }
-        
-        # BỘ LỌC AN TOÀN: Hạ phán quyết nếu điểm thấp
-        if conf_val < 70.0 and result["verdict"] == "SUPPORTED":
-            result["verdict"] = "INSUFFICIENT"
-            result["reason"] = f"[CẢNH BÁO ĐỘ TIN CẬY THẤP {conf_val}%]: {result['reason']}"
 
-        return result
+        # ── 4. Safe JSON parse — strip markdown fences, coerce field types ──────
+        raw_text = response["message"]["content"].strip()
+        if raw_text.startswith("```"):
+            raw_text = re.sub(r"```(?:json)?", "", raw_text).strip()
+
+        try:
+            llm_res = json.loads(raw_text)
+        except Exception as parse_err:
+            llm_res = {
+                "verdict":         "INSUFFICIENT",
+                "confidence":      0.3,
+                "reasoning":       f"Lỗi phân tích JSON: {parse_err}",
+                "direct_evidence": None,
+            }
+
+        # Coerce fields — model occasionally returns nested dicts instead of strings
+        if isinstance(llm_res.get("reasoning"), dict):
+            llm_res["reasoning"] = str(llm_res["reasoning"])
+        if isinstance(llm_res.get("direct_evidence"), dict):
+            llm_res["direct_evidence"] = str(llm_res["direct_evidence"])
+
+        verdict        = llm_res.get("verdict", "INSUFFICIENT")
+        llm_confidence = float(llm_res.get("confidence", 0.0))
+        reasoning      = llm_res.get("reasoning", "AI không đưa ra lý giải cụ thể.")
+        raw_evidence   = llm_res.get("direct_evidence") or None
+
+        llm_confidence = max(0.0, min(1.0, llm_confidence))
+        conf_final     = calculate_confidence(best_rerank, llm_confidence)
+
+        # ── 5. Validate direct_evidence against retrieved docs ────────────────
+        validated_evidence = validate_direct_evidence(raw_evidence, support_text)
+
+        if validated_evidence is None and verdict == "SUPPORTED":
+            verdict        = "INSUFFICIENT"
+            llm_confidence = min(llm_confidence, 0.45)
+            conf_final     = calculate_confidence(best_rerank, llm_confidence)
+            reasoning      = "[Bằng chứng không xác thực] " + reasoning
+
+        return {
+            "verdict":         verdict,
+            "confidence":      conf_final,
+            "reasoning":       reasoning,
+            "direct_evidence": validated_evidence,
+            "evidence":        validated_evidence or "N/A",
+            "reason":          reasoning,
+            "sufficient":      conf_final >= 0.70 and verdict not in ("INSUFFICIENT", "ERROR"),
+        }
 
     except Exception as e:
         return _build_fallback(f"Lỗi phân tích: {str(e)}")
 
+
 def _build_fallback(reason: str) -> dict:
-    return {"verdict": "INSUFFICIENT", "confidence": "0.0%", "evidence": "N/A", "reason": reason, "sufficient": False}
+    return {
+        "verdict":         "INSUFFICIENT",
+        "confidence":      0.0,
+        "reasoning":       reason,
+        "direct_evidence": None,
+        "evidence":        "N/A",
+        "reason":          reason,
+        "sufficient":      False,
+    }

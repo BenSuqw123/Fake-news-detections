@@ -5,44 +5,47 @@ Defines dynamic paths relative to project root and environment variables.
 
 import os
 from pathlib import Path
-from typing import Optional
 from dotenv import load_dotenv
 
-# Load .env file if exists
 load_dotenv()
 
-# Dynamically determine project root: parent of src/
 PROJECT_ROOT: Path = Path(__file__).resolve().parent.parent
 DATA_DIR: Path = PROJECT_ROOT / "RAG-LAW" / "Data"
 TRANSFORMER_DIR: Path = PROJECT_ROOT / "Transformer"
 RAW_DATA_DIR: Path = PROJECT_ROOT / "liar_dataset"
 MODELS_DIR: Path = PROJECT_ROOT / "RAG-LAW" / "Models"
 
-# Environment overrides (optional)
 DATA_DIR = Path(os.getenv("DATA_DIR", DATA_DIR))
 TRANSFORMER_DIR = Path(os.getenv("TRANSFORMER_DIR", TRANSFORMER_DIR))
 MODELS_DIR = Path(os.getenv("MODELS_DIR", MODELS_DIR))
 
-# API Keys
-OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "your-key-here")  # Set in .env
+OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "your-key-here")
 
-# Embedding constants (BGE local/free)
-EMBEDDING_MODEL_NAME = "BAAI/bge-small-en-v1.5"  # Fast, 384 dim; use bge-m3 for multi-lang
-BGE_MODEL = EMBEDDING_MODEL_NAME  # Alias
+# LLM served by Ollama (local, CPU-only)
+LLM_MODEL: str = "llama3.2"
+
+# Embedding (multilingual, BAAI/bge-m3)
+EMBEDDING_MODEL_NAME: str = "BAAI/bge-m3"
+BGE_MODEL: str = EMBEDDING_MODEL_NAME
 PROCESSED_DATA_PATH = DATA_DIR / "processed" / "knowledge_unified.pkl"
 CHUNK_SIZE: int = 1000
 
-# Backwards compat
-EMBED_MODEL = "deprecated-openai"  # Use BGE now
+# Retrieval top-k limits — keep small for CPU-only speed
+TOP_K_RETRIEVAL: int = 20   # documents fetched from each retriever
+TOP_K_RERANK: int    = 5    # documents passed to LLM after reranking
+
+EMBED_MODEL = "deprecated-openai"
+
 
 def ensure_dirs() -> None:
-    """Create necessary directories if missing."""
     for dir_path in [DATA_DIR, TRANSFORMER_DIR, MODELS_DIR]:
         dir_path.mkdir(parents=True, exist_ok=True)
 
+
 if __name__ == "__main__":
     print(f"Project Root: {PROJECT_ROOT}")
-    print(f"Data Dir: {DATA_DIR}")
+    print(f"Data Dir:     {DATA_DIR}")
+    print(f"LLM Model:    {LLM_MODEL}")
+    print(f"TOP_K_RETRIEVAL={TOP_K_RETRIEVAL}  TOP_K_RERANK={TOP_K_RERANK}")
     ensure_dirs()
     print("Directories ensured.")
-

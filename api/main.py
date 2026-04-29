@@ -6,18 +6,82 @@ project_root = Path(__file__).resolve().parent.parent
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from api.router import router
+from src.config import LLM_MODEL
 
-app = FastAPI(title="Vietnamese Fake News Detection System")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """
+    Pre-warm all heavy models before the first request arrives.
+
+    IMPORTANT — ordering matters on Windows / Python 3.14:
+    1. underthesea `word_tokenize` uses a module-level global
+       `word_tokenize_model = None` that is lazily loaded on the FIRST call.
+       FastCRFSequenceTagger.predict() internally calls
+       `self.featurizer.process(...)`. If multiple executor threads hit
+       word_tokenize simultaneously before the model is fully initialised,
+       featurizer is still None in competing threads → crash:
+           "'NoneType' object has no attribute 'process'"
+       Fix: call word_tokenize ONCE in the main thread (single-threaded)
+       BEFORE any run_in_executor, so the global is fully populated.
+
+    2. ChromaDB PersistentClient is initialised here via run_in_executor
+       to keep the event loop responsive.
+    """
+    import asyncio
+    loop = asyncio.get_event_loop()
+
+    # ------------------------------------------------------------------ #
+    # Step 1 — Force underthesea to load its CRF model in the MAIN thread #
+    # BEFORE any executor threads touch word_tokenize.                     #
+    # This eliminates the race on the module-level word_tokenize_model.   #
+    # ------------------------------------------------------------------ #
+    print("[Startup] Pre-warming underthesea word_tokenize (main thread) …")
+    from underthesea import word_tokenize as _wt
+    _wt("khởi động", format="text")   # single warm-up call; model now loaded
+    print("[Startup] underthesea ready.")
+
+    # ------------------------------------------------------------------ #
+    # Step 2 — Load BM25 index (safe now: word_tokenize model is ready)  #
+    # ------------------------------------------------------------------ #
+    print("[Startup] Pre-warming BM25 index …")
+    from src.retriever.search_bm25 import load_bm25
+    await loop.run_in_executor(None, load_bm25)
+    print("[Startup] BM25 ready.")
+
+    # ------------------------------------------------------------------ #
+    # Step 3 — Load ChromaDB (PersistentClient, local Rust backend)       #
+    # ------------------------------------------------------------------ #
+    print("[Startup] Pre-warming ChromaDB …")
+    from src.retriever.search_chromadb import load_chroma
+    await loop.run_in_executor(None, load_chroma)
+    print("[Startup] ChromaDB ready.")
+
+    # ------------------------------------------------------------------ #
+    # Step 4 — Embedder (Ollama HTTP, non-blocking)                       #
+    # ------------------------------------------------------------------ #
+    print("[Startup] Pre-warming embedder …")
+    from src.retriever.embedder import get_embedder
+    await loop.run_in_executor(None, get_embedder)
+    print("[Startup] Embedder ready.")
+
+    print("[Startup] ✓ All models ready — accepting requests.")
+    yield
+
+
+app = FastAPI(title="Vietnamese Fake News Detection System", lifespan=lifespan)
 
 app.include_router(router)
 
 static_path = os.path.join(os.path.dirname(__file__), "static")
 os.makedirs(static_path, exist_ok=True)
 app.mount("/static", StaticFiles(directory=static_path), name="static")
+
 
 @app.get("/")
 async def root():
@@ -26,11 +90,26 @@ async def root():
         return FileResponse(index_file)
     return {"message": "index.html not found in static folder."}
 
+
+@app.get("/favicon.ico", include_in_schema=False)
+async def favicon():
+    svg = (
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">'
+        '<rect width="100" height="100" rx="20" fill="#2563EB"/>'
+        '<path d="M50 12 L80 22 L80 52 C80 70 66 82 50 88 '
+        "C34 82 20 70 20 52 L20 22 Z\" fill='white' opacity='0.92'/>"
+        '<path d="M35 51 L45 62 L65 40" stroke="#2563EB" stroke-width="7" '
+        'fill="none" stroke-linecap="round" stroke-linejoin="round"/>'
+        "</svg>"
+    )
+    return Response(content=svg, media_type="image/svg+xml")
+
+
 @app.get("/health")
 async def health_check():
     return {
         "status": "ok",
-        "model": "llama3.2",
+        "model":  LLM_MODEL,
         "chroma": "connected",
-        "bm25": "loaded"
+        "bm25":   "loaded",
     }

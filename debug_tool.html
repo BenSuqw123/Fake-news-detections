@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RAG-LAW Debug Tool</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0f172a; --surface: #1e293b; --surface2: #273549;
+    --border: #334155; --text: #e2e8f0; --sub: #94a3b8;
+    --blue: #3b82f6; --blue-d: #2563eb;
+    --green: #22c55e; --red: #ef4444; --yellow: #f59e0b;
+    --radius: 10px; --mono: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+  }
+  body { background: var(--bg); color: var(--text); font-family: system-ui, sans-serif;
+         min-height: 100vh; padding: 24px; }
+  h1 { font-size: 1.4rem; font-weight: 700; margin-bottom: 4px; }
+  .subtitle { color: var(--sub); font-size: .85rem; margin-bottom: 28px; }
+
+  /* ---------- API KEY BAR ---------- */
+  .key-bar { display: flex; gap: 10px; align-items: center; margin-bottom: 28px; }
+  .key-bar label { font-size: .8rem; color: var(--sub); white-space: nowrap; }
+  .key-bar input {
+    flex: 1; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; padding: 8px 12px; color: var(--text); font-size: .85rem;
+    font-family: var(--mono); outline: none;
+  }
+  .key-bar input:focus { border-color: var(--blue); }
+  .key-save { background: var(--blue-d); color: #fff; border: none; border-radius: 8px;
+              padding: 8px 16px; cursor: pointer; font-size: .82rem; white-space: nowrap; }
+  .key-save:hover { background: var(--blue); }
+
+  /* ---------- COMMANDS GRID ---------- */
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 16px;
+          margin-bottom: 24px; }
+  .cmd-card { background: var(--surface); border: 1px solid var(--border);
+              border-radius: var(--radius); padding: 16px; }
+  .cmd-card h3 { font-size: .78rem; text-transform: uppercase; letter-spacing: .08em;
+                 color: var(--sub); margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+  .dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+  .dot-blue  { background: var(--blue); }
+  .dot-green { background: var(--green); }
+  .dot-yellow{ background: var(--yellow); }
+  .cmd-code { background: var(--bg); border: 1px solid var(--border); border-radius: 7px;
+              padding: 12px; font-family: var(--mono); font-size: .78rem; color: #7dd3fc;
+              white-space: pre-wrap; word-break: break-all; line-height: 1.6;
+              user-select: all; cursor: text; margin-bottom: 10px; }
+  .copy-btn { font-size: .75rem; background: transparent; border: 1px solid var(--border);
+              color: var(--sub); border-radius: 6px; padding: 4px 10px; cursor: pointer; }
+  .copy-btn:hover { border-color: var(--blue); color: var(--blue); }
+  .copy-btn.copied { border-color: var(--green); color: var(--green); }
+
+  /* ---------- PASTE AREA ---------- */
+  .paste-section { margin-bottom: 20px; }
+  .paste-section label { font-size: .82rem; color: var(--sub); display: block; margin-bottom: 8px; }
+  textarea {
+    width: 100%; height: 240px; background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 14px; color: var(--text); font-family: var(--mono);
+    font-size: .78rem; line-height: 1.6; resize: vertical; outline: none;
+  }
+  textarea:focus { border-color: var(--blue); }
+  textarea::placeholder { color: var(--border); }
+
+  /* ---------- CONTROLS ---------- */
+  .controls { display: flex; gap: 12px; align-items: center; margin-bottom: 28px; }
+  .analyze-btn {
+    background: var(--blue-d); color: #fff; border: none; border-radius: 9px;
+    padding: 12px 28px; font-size: .92rem; font-weight: 600; cursor: pointer;
+    display: flex; align-items: center; gap: 8px; transition: background .15s;
+  }
+  .analyze-btn:hover:not(:disabled) { background: var(--blue); }
+  .analyze-btn:disabled { opacity: .5; cursor: not-allowed; }
+  .clear-btn { background: transparent; border: 1px solid var(--border); color: var(--sub);
+               border-radius: 9px; padding: 11px 20px; font-size: .88rem; cursor: pointer; }
+  .clear-btn:hover { border-color: var(--red); color: var(--red); }
+  .spinner { display: none; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,.3);
+             border-top-color: #fff; border-radius: 50%; animation: spin .7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ---------- RESULT ---------- */
+  #result { display: none; background: var(--surface); border: 1px solid var(--border);
+            border-radius: var(--radius); padding: 20px; }
+  #result .result-header { display: flex; align-items: center; gap: 10px; margin-bottom: 16px;
+                            font-size: .82rem; font-weight: 600; text-transform: uppercase;
+                            letter-spacing: .06em; }
+  .badge { padding: 3px 10px; border-radius: 99px; font-size: .72rem; font-weight: 700; }
+  .badge-ok   { background: #14532d; color: var(--green); }
+  .badge-warn { background: #451a03; color: var(--yellow); }
+  .badge-err  { background: #450a0a; color: var(--red); }
+
+  /* Rendered markdown */
+  #result-body { line-height: 1.7; font-size: .88rem; color: var(--text); }
+  #result-body h3 { font-size: .95rem; margin: 18px 0 8px; color: #93c5fd; }
+  #result-body h4 { font-size: .85rem; margin: 14px 0 6px; color: var(--sub); text-transform: uppercase; letter-spacing: .05em; }
+  #result-body p  { margin-bottom: 10px; }
+  #result-body ul, #result-body ol { padding-left: 20px; margin-bottom: 10px; }
+  #result-body li { margin-bottom: 4px; }
+  #result-body code { background: var(--bg); border: 1px solid var(--border); border-radius: 4px;
+                      padding: 1px 6px; font-family: var(--mono); font-size: .8rem; color: #7dd3fc; }
+  #result-body pre { background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+                     padding: 14px; margin: 10px 0; overflow-x: auto; }
+  #result-body pre code { background: none; border: none; padding: 0; font-size: .78rem; color: #7dd3fc; }
+  #result-body strong { color: #fde68a; }
+  #result-body em { color: var(--sub); }
+  #result-body hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
+
+  .error-box { background: #450a0a; border: 1px solid #7f1d1d; border-radius: 8px;
+               padding: 12px 16px; color: var(--red); font-size: .84rem; }
+</style>
+</head>
+<body>
+
+<h1>RAG-LAW Debug Tool</h1>
+<p class="subtitle">Chạy 3 lệnh bên dưới trong terminal → dán output → nhấn Analyze</p>
+
+<!-- API KEY -->
+<div class="key-bar">
+  <label>Anthropic API Key</label>
+  <input type="password" id="apiKey" placeholder="sk-ant-api03-…" autocomplete="off">
+  <button class="key-save" onclick="saveKey()">Lưu</button>
+</div>
+
+<!-- 3 DEBUG COMMANDS -->
+<div class="grid">
+
+  <div class="cmd-card">
+    <h3><span class="dot dot-blue"></span>CMD 1 — ChromaDB + Embedder</h3>
+    <div class="cmd-code" id="cmd1">cd "c:\Users\ACER\Documents\Desktop\Fake News Detection\Fake-news-detections" && python -c "
+import sys, time
+sys.path.insert(0,'.')
+t=time.time()
+from src.retriever.search_chromadb import search_chroma
+r=search_chroma('luật giao thong', top_k=3)
+print(f'OK  results={len(r)}  time={time.time()-t:.1f}s')
+for x in r: print(f'  score={x[\"score\"]:.4f}  id={x[\"id\"]}')
+" 2>&1</div>
+    <button class="copy-btn" onclick="copyCmd('cmd1',this)">Copy</button>
+  </div>
+
+  <div class="cmd-card">
+    <h3><span class="dot dot-green"></span>CMD 2 — BM25 + Reranker</h3>
+    <div class="cmd-code" id="cmd2">cd "c:\Users\ACER\Documents\Desktop\Fake News Detection\Fake-news-detections" && python -c "
+import sys, time
+sys.path.insert(0,'.')
+t=time.time()
+from src.retriever.search_bm25 import search_bm25
+from user_input_processing.re_ranking import apply_reranking
+docs=search_bm25('luat giao thong', top_k=5)
+print(f'BM25  results={len(docs)}')
+ranked=apply_reranking('luat giao thong', docs, top_k=3)
+print(f'Rerank  results={len(ranked)}  time={time.time()-t:.1f}s')
+for x in ranked: print(f'  rerank={x.get(\"rerank_score\",0):.4f}  id={x[\"id\"]}')
+" 2>&1</div>
+    <button class="copy-btn" onclick="copyCmd('cmd2',this)">Copy</button>
+  </div>
+
+  <div class="cmd-card">
+    <h3><span class="dot dot-yellow"></span>CMD 3 — Ollama + evaluate_final</h3>
+    <div class="cmd-code" id="cmd3">cd "c:\Users\ACER\Documents\Desktop\Fake News Detection\Fake-news-detections" && python -c "
+import sys, asyncio, time
+sys.path.insert(0,'.')
+from user_input_processing.evaluation_layer import evaluate_final
+docs=[{'text':'Người điều khiển xe phải có giấy phép lái xe.','metadata':{'law_title':'Luật GT','article':'22'},'rerank_score':0.9}]
+async def run():
+    t=time.time()
+    r=await evaluate_final('Lái xe cần có bằng lái.', docs)
+    print(f'OK  verdict={r[\"verdict\"]}  conf={r[\"confidence\"]}  time={time.time()-t:.1f}s')
+asyncio.run(run())
+" 2>&1</div>
+    <button class="copy-btn" onclick="copyCmd('cmd3',this)">Copy</button>
+  </div>
+
+</div>
+
+<!-- PASTE OUTPUT -->
+<div class="paste-section">
+  <label>Dán toàn bộ output của 3 lệnh vào đây (kể cả stderr / traceback)</label>
+  <textarea id="logOutput" placeholder="Paste terminal output here…&#10;&#10;Ví dụ:&#10;OK  results=3  time=4.2s&#10;  score=1.3695  id=1253_2_1&#10;BM25  results=5&#10;..."></textarea>
+</div>
+
+<!-- CONTROLS -->
+<div class="controls">
+  <button class="analyze-btn" id="analyzeBtn" onclick="analyze()">
+    <span class="spinner" id="spinner"></span>
+    <span id="btnText">Analyze với Claude</span>
+  </button>
+  <button class="clear-btn" onclick="clearAll()">Xóa</button>
+</div>
+
+<!-- RESULT -->
+<div id="result">
+  <div class="result-header">
+    <span>Kết quả phân tích</span>
+    <span class="badge" id="badge">—</span>
+  </div>
+  <div id="result-body"></div>
+</div>
+
+<script>
+// ── helpers ────────────────────────────────────────────────────────────────
+const $ = id => document.getElementById(id);
+
+function saveKey() {
+  const k = $('apiKey').value.trim();
+  if (k) { localStorage.setItem('claude_api_key', k); alert('Đã lưu API key vào localStorage.'); }
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  const k = localStorage.getItem('claude_api_key');
+  if (k) $('apiKey').value = k;
+});
+
+function copyCmd(id, btn) {
+  const text = $(id).textContent;
+  navigator.clipboard.writeText(text.trim()).then(() => {
+    btn.textContent = 'Copied!';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 1500);
+  });
+}
+
+function clearAll() {
+  $('logOutput').value = '';
+  $('result').style.display = 'none';
+}
+
+// ── simple markdown renderer ────────────────────────────────────────────────
+function renderMd(md) {
+  return md
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/```[\w]*\n?([\s\S]*?)```/g, (_,c) => `<pre><code>${c.trim()}</code></pre>`)
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+    .replace(/^## (.+)$/gm, '<h3>$1</h3>')
+    .replace(/^#### (.+)$/gm, '<h4>$1</h4>')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    .replace(/^---$/gm, '<hr>')
+    .replace(/^\d+\. (.+)$/gm, '<li>$1</li>')
+    .replace(/^[-*] (.+)$/gm, '<li>$1</li>')
+    .replace(/(<li>.*<\/li>\n?)+/g, m => `<ul>${m}</ul>`)
+    .replace(/\n\n+/g, '</p><p>')
+    .replace(/^(?!<[uh]|<pre|<hr|<li)(.+)$/gm, '$1')
+    .replace(/(<\/ul>)\n<p>/g, '$1<p>')
+    .trim();
+}
+
+// ── main analyze ───────────────────────────────────────────────────────────
+async function analyze() {
+  const apiKey = $('apiKey').value.trim() || localStorage.getItem('claude_api_key') || '';
+  const log    = $('logOutput').value.trim();
+
+  if (!apiKey) { alert('Nhập Anthropic API key trước.'); return; }
+  if (!log)    { alert('Dán output terminal vào textarea trước.'); return; }
+
+  // UI loading state
+  $('analyzeBtn').disabled = true;
+  $('spinner').style.display = 'block';
+  $('btnText').textContent = 'Đang phân tích…';
+  $('result').style.display = 'none';
+
+  const systemPrompt = `You are an expert Python/FastAPI debugger specializing in RAG pipelines.
+The user has a Vietnamese Fake News Detection system with:
+- FastAPI backend (/verify endpoint)
+- ChromaDB 0.5.23 + BAAI/bge-m3 embedder (1024-dim) for vector retrieval
+- BM25 via rank-bm25 + underthesea tokenizer
+- BAAI/bge-reranker-v2-m3 CrossEncoder for reranking
+- Ollama llama3.2:1b (CPU-only) for LLM evaluation
+- Python 3.14, NumPy 2.x, Windows 11
+
+Recent patches applied:
+1. chromadb downgraded to 0.5.23 (--no-deps)
+2. np.float_ → np.float64 patch in types.py
+3. sysdb.py patched to handle empty config_json
+4. local_persistent_hnsw.py patched to handle legacy dict pickle
+5. index_metadata.pickle migrated to PersistentData(dimensionality=1024)
+6. run_in_executor wrapping all sync blocking calls in async context
+7. num_predict=512 added to evaluation_layer.py Ollama call
+8. Startup lifespan pre-warms embedder, reranker, BM25
+
+Analyze the debug output provided. Return:
+### Trạng thái hệ thống
+Brief overall health (OK / WARNING / ERROR per component)
+
+### Vấn đề phát hiện
+Specific issues found, citing exact error lines or anomalies
+
+### Nguyên nhân gốc
+Root cause explanation (why, not just what)
+
+### Cách fix
+Exact code changes or commands to fix each issue. Show file path and line numbers.
+
+### Kết luận
+One-line verdict: is the system ready to serve requests?
+
+Be specific. If output looks healthy, say so clearly.`;
+
+  const userMsg = `Debug output from 3 commands:\n\n${log}`;
+
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type':            'application/json',
+        'x-api-key':               apiKey,
+        'anthropic-version':       '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true',
+      },
+      body: JSON.stringify({
+        model:      'claude-sonnet-4-6',
+        max_tokens: 1500,
+        system:     systemPrompt,
+        messages:   [{ role: 'user', content: userMsg }],
+      }),
+    });
+
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({}));
+      throw new Error(`API ${resp.status}: ${err?.error?.message || resp.statusText}`);
+    }
+
+    const data = await resp.json();
+    const text = data?.content?.[0]?.text || '(no response)';
+
+    // Determine badge
+    const upper = text.toUpperCase();
+    let badgeClass = 'badge-ok', badgeText = 'HEALTHY';
+    if (upper.includes('ERROR') || upper.includes('LỖI') || upper.includes('TRACEBACK')) {
+      badgeClass = 'badge-err'; badgeText = 'ERROR';
+    } else if (upper.includes('WARN') || upper.includes('CẢNH BÁO')) {
+      badgeClass = 'badge-warn'; badgeText = 'WARNING';
+    }
+
+    $('badge').className = `badge ${badgeClass}`;
+    $('badge').textContent = badgeText;
+    $('result-body').innerHTML = '<p>' + renderMd(text) + '</p>';
+    $('result').style.display = 'block';
+    $('result').scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+  } catch (err) {
+    $('badge').className = 'badge badge-err';
+    $('badge').textContent = 'REQUEST FAILED';
+    $('result-body').innerHTML = `<div class="error-box">${err.message}</div>`;
+    $('result').style.display = 'block';
+  } finally {
+    $('analyzeBtn').disabled = false;
+    $('spinner').style.display = 'none';
+    $('btnText').textContent = 'Analyze với Claude';
+  }
+}
+</script>
+</body>
+</html>

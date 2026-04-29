@@ -8,7 +8,7 @@ def load_bm25():
     global BM25_DATA
 
     if BM25_DATA is None:
-        path = r"C:\Users\User\Desktop\Fake news detection\Fake-news-detections\RAG_LAW\Models\bm25\bm25_database.pkl"
+        path = r"C:\Users\ACER\Documents\Desktop\Fake News Detection\Fake-news-detections\RAG_LAW\Models\bm25\bm25_database.pkl"
         with open(path, "rb") as f:
             BM25_DATA = pickle.load(f)
 
