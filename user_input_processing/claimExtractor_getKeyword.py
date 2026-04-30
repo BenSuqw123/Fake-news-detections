@@ -93,8 +93,9 @@ async def extract_atomic_claims(article_text: str) -> list:
             ],
             options={
                 'temperature': 0,
-                'num_predict': 2048,
-                'top_p': 0.1
+                'num_predict': 512,    # reduced from 2048 — JSON output is short
+                'num_ctx':     4096,   # explicit context window
+                'top_p':       0.1,
             },
             format='json'
         )

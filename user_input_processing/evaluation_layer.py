@@ -16,48 +16,45 @@ import asyncio
 from typing import Optional
 
 # ── System message — static instructions only, no claim data ──────────────────
-SYSTEM_INSTRUCTIONS = """Bạn là chuyên gia pháp lý Việt Nam với 20 năm kinh nghiệm.
-Nhiệm vụ của bạn là đánh giá xem một tuyên bố có được xác nhận bởi các văn bản pháp luật hay không.
+# Trimmed to keep under ~350 tokens (Vietnamese chars count ~1.5× vs English)
+SYSTEM_INSTRUCTIONS = """Bạn là chuyên gia pháp lý Việt Nam. Đánh giá tuyên bố dựa trên bằng chứng pháp luật.
 
-QUY TRÌNH BẮT BUỘC (thực hiện theo thứ tự, không bỏ qua bước nào):
+QUY TRÌNH (theo thứ tự):
+1. Đọc kỹ TUYÊN BỐ: xác định quyền/nghĩa vụ/quy định đang được đề cập.
+2. Kiểm tra BẰNG CHỨNG ỦNG HỘ: có điều khoản NÓI RÕ về đúng nội dung tuyên bố không?
+   - "Trực tiếp" = điều khoản quy định chính xác quyền/nghĩa vụ đó.
+   - Cùng chủ đề chung KHÔNG tính là bằng chứng trực tiếp.
+3. Kiểm tra BẰNG CHỨNG PHỦ NHẬN: điều khoản nào mâu thuẫn trực tiếp?
+4. Kết luận:
+   - Có bằng chứng ủng hộ trực tiếp, không có mâu thuẫn → SUPPORTED
+   - Có bằng chứng mâu thuẫn trực tiếp → CONTRADICTED
+   - Có cả hai → PARTIAL
+   - Không có bằng chứng trực tiếp → INSUFFICIENT
 
-Bước 1 — Đọc kỹ TUYÊN BỐ: Xác định chính xác tuyên bố đang nói về quyền/nghĩa vụ/quy định GÌ.
+LUẬT QUAN TRỌNG:
+- KHÔNG tìm thấy bằng chứng phủ nhận ≠ tuyên bố đúng.
+- Chỉ SUPPORTED khi tìm được điều khoản NÓI RÕ nội dung tuyên bố.
+- Sai tên/chức danh/cơ quan → CONTRADICTED.
 
-Bước 2 — Kiểm tra từng BẰNG CHỨNG ỦNG HỘ:
-- Bằng chứng này có TRỰC TIẾP xác nhận đúng nội dung tuyên bố không?
-- "Trực tiếp" = điều khoản đó nói rõ về đúng quyền/nghĩa vụ được đề cập trong tuyên bố
-- Cùng chủ đề chung KHÔNG tính là bằng chứng trực tiếp
-- Ví dụ: tuyên bố về "quyền lập đảng" → Điều 15 "quyền công dân" là KHÔNG trực tiếp
-
-Bước 3 — Kiểm tra từng BẰNG CHỨNG PHỦ NHẬN:
-- Bằng chứng này có TRỰC TIẾP mâu thuẫn với tuyên bố không?
-- Ghi rõ: điều khoản nào mâu thuẫn và tại sao
-
-Bước 4 — Kết luận theo đúng logic sau:
-- Có bằng chứng ủng hộ TRỰC TIẾP + không có mâu thuẫn → SUPPORTED
-- Có bằng chứng mâu thuẫn TRỰC TIẾP → CONTRADICTED
-- Có bằng chứng ủng hộ một phần VÀ mâu thuẫn một phần → PARTIAL
-- KHÔNG có bằng chứng nào trực tiếp xác nhận → INSUFFICIENT
-
-LUẬT QUAN TRỌNG NHẤT:
-- "Không tìm thấy bằng chứng phủ nhận" KHÔNG có nghĩa là tuyên bố đúng
-- Chỉ SUPPORTED khi tìm được điều khoản NÓI RÕ về đúng nội dung tuyên bố
-- Nếu tuyên bố về quyền X nhưng không tìm thấy điều khoản nào quy định quyền X → INSUFFICIENT
-- Nếu tuyên bố sai tên chức danh, sai tên cơ quan, sai quy trình → CONTRADICTED
-- Ví dụ: tuyên bố "công dân lập đảng độc lập" → Điều 7 (bầu cử/đầu phiếu) KHÔNG trực tiếp; phải tìm Điều 4 (vai trò lãnh đạo của Đảng Cộng sản) → CONTRADICTED
-- Ví dụ: tuyên bố "quyền tự do ngôn luận" → Điều 25 Hiến pháp quy định rõ → SUPPORTED
-
-Trả lời CHỈ bằng JSON, không thêm bất kỳ text nào khác:
+Trả lời CHỈ bằng JSON:
 {
   "verdict": "SUPPORTED|CONTRADICTED|PARTIAL|INSUFFICIENT",
   "confidence": <float 0.0-1.0>,
-  "reasoning": "<2-3 câu tiếng Việt giải thích: bằng chứng nào trực tiếp xác nhận/phủ nhận và tại sao>",
-  "direct_evidence": "<tên điều khoản cụ thể VÀ trích dẫn ngắn nội dung, hoặc null nếu không có>"
+  "reasoning": "<2-3 câu tiếng Việt giải thích bằng chứng>",
+  "direct_evidence": "<tên điều khoản cụ thể và trích dẫn ngắn, hoặc null>"
 }"""
 
 
+# Max chars per doc snippet sent to LLM — keeps prompt inside 4096-token window
+_DOC_CHAR_LIMIT = 250
+
+
 def _format_docs(docs: list) -> str:
-    """Convert doc-dict list to a labelled paragraph string for the prompt."""
+    """Convert doc-dict list to a labelled paragraph string for the prompt.
+
+    Each doc text is truncated to _DOC_CHAR_LIMIT characters to keep the
+    total prompt size within llama3.2's 4096-token context window.
+    """
     if not docs:
         return "(Không có bằng chứng)"
     lines = []
@@ -66,10 +63,10 @@ def _format_docs(docs: list) -> str:
             meta  = d.get("metadata") or {}
             title = meta.get("law_title", "Văn bản")
             art   = meta.get("article",   "?")
-            text  = d.get("text", "")
+            text  = d.get("text", "")[:_DOC_CHAR_LIMIT]   # ← truncate to 250 chars
             lines.append(f"[{title} - Điều {art}]: {text}")
         else:
-            lines.append(str(d))
+            lines.append(str(d)[:_DOC_CHAR_LIMIT])
     return "\n\n".join(lines)
 
 
@@ -148,14 +145,30 @@ async def evaluate_final(
 
     # ── 3. Call LLM with system/user split ────────────────────────────────────
     try:
+        user_msg = build_user_message(claim, support_text, contra_text)
+
+        # ── Debug: estimate prompt token count before every Ollama call ────────
+        full_prompt = SYSTEM_INSTRUCTIONS + "\n" + user_msg
+        word_count  = len(full_prompt.split())
+        token_est   = int(word_count * 1.5)   # Vietnamese inflates ~1.5× vs English
+        print(f"[DEBUG] Prompt words={word_count}, est_tokens={token_est}, limit=4096")
+        if token_est > 3500:
+            print(f"[WARNING] Prompt approaching context limit! ({token_est} tokens)")
+
         client = ollama.AsyncClient()
         response = await client.chat(
             model   = "llama3.2",
             messages= [
                 {"role": "system", "content": SYSTEM_INSTRUCTIONS},
-                {"role": "user",   "content": build_user_message(claim, support_text, contra_text)},
+                {"role": "user",   "content": user_msg},
             ],
-            options = {"temperature": 0, "num_predict": 1024, "seed": 42},
+            options = {
+                "temperature":    0,
+                "num_predict":    512,    # max output tokens
+                "num_ctx":        4096,   # explicit context window — no ambiguity
+                "repeat_penalty": 1.1,   # reduces repetition loops
+                "seed":           42,
+            },
             format  = "json",
         )
 

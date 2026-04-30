@@ -30,9 +30,10 @@ BGE_MODEL: str = EMBEDDING_MODEL_NAME
 PROCESSED_DATA_PATH = DATA_DIR / "processed" / "knowledge_unified.pkl"
 CHUNK_SIZE: int = 1000
 
-# Retrieval top-k limits — keep small for CPU-only speed
-TOP_K_RETRIEVAL: int = 20   # documents fetched from each retriever
-TOP_K_RERANK: int    = 5    # documents passed to LLM after reranking
+# Retrieval top-k limits — tuned to keep prompts inside llama3.2's 4096-token window
+TOP_K_RETRIEVAL: int = 10   # docs fetched from each retriever  (was 20)
+TOP_K_RERANK: int    = 3    # docs passed to LLM after reranking (was 5)
+DOC_CHAR_LIMIT: int  = 250  # max chars per doc snippet in the LLM prompt
 
 EMBED_MODEL = "deprecated-openai"
 
