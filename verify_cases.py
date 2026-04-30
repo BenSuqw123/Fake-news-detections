@@ -1,112 +1,74 @@
-"""
-verify_cases.py
-===============
-Verification of 3 test cases for the dual-retrieval fix.
-Uses pre_extracted_claims to bypass the LLM Guardrail so we can test
-the retrieval+evaluation pipeline directly with Vietnamese text.
-
-Run: python verify_cases.py
-"""
+# test_both_retrievers.py
 import sys
-import io
-import asyncio
-from pathlib import Path
+sys.path.insert(0, '.')
 
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
-sys.path.insert(0, str(Path(__file__).parent))
-
-# Pre-warm underthesea in main thread (avoid race on executor threads)
+# Pre-warm underthesea trước khi import bất kỳ thứ gì
 from underthesea import word_tokenize as _wt
-_wt("khoi dong", format="text")
-print("[Pre-warm] underthesea OK")
+_wt('khoi dong', format='text')
 
-# ── Test cases ────────────────────────────────────────────────────────────────
-# Pre-extracted so we bypass Guardrail + ClaimExtractor (both use Ollama too)
-# and measure purely the retrieval + evaluation quality.
-CASES = [
-    {
-        "name":           "Case 1 — DUNG (expect REAL)",
-        "claims":         [{"claim": "Theo Dieu 25 Hien phap 2013, cong dan co quyen tu do ngon luan, tu do bao chi, tiep can thong tin, hoi hop, lap hoi, bieu tinh.", "keywords": ""}],
-        "expected_label": "REAL",
-    },
-    {
-        "name":           "Case 2 — SAI (expect FAKE)",
-        "claims":         [{"claim": "Cong dan Viet Nam co quyen tu do thanh lap dang phai chinh tri doc lap va ung cu tong thong theo hinh thuc pho thong dau phieu truc tiep theo Hien phap 2013.", "keywords": ""}],
-        "expected_label": "FAKE",
-    },
-    {
-        "name":           "Case 3 — MO HO (expect UNCERTAIN)",
-        "claims":         [{"claim": "Luat Lao dong Viet Nam quy dinh nguoi lao dong duoc nghi toi thieu 15 ngay phep nam va nhan luong thang 13 bat buoc tu nguoi su dung lao dong.", "keywords": ""}],
-        "expected_label": "UNCERTAIN",
-    },
-]
+import urllib.request
+import json
+import chromadb
+from pathlib import Path
+from src.retriever.search_bm25 import search_bm25, _EXPANSION_MAP
 
+query = "Theo Hiến pháp 2013, công dân Việt Nam có quyền tự do thành lập đảng phái chính trị độc lập"
 
-class _FakeResult:
-    """Minimal stand-in for Pydantic RetrievalResult."""
-    def __init__(self, method: str, verdict: str, confidence: float):
-        self.method     = method
-        self.verdict    = verdict
-        self.confidence = confidence
+print("=" * 60)
+print("QUERY:", query)
+print("=" * 60)
 
+# ==================== BM25 ====================
+print("\n[BM25] Testing via search_bm25()...")
+print("[BM25] Expansion map:", list(_EXPANSION_MAP.keys()))
 
-async def main():
-    from src.pipeline import run_pipeline
-    from src.verdict_aggregator import compute_truthfulness_score
+results_bm25 = search_bm25(query, top_k=5)
+print(f"[BM25] Top {len(results_bm25)} docs:")
+for i, r in enumerate(results_bm25):
+    print(f"  #{i+1} score={r['score']:.3f} | {r['text'][:120]}")
 
-    print("\n" + "=" * 65)
-    print("VERIFICATION — 3 test cases (dual-retrieval fix)")
-    print("=" * 65)
+dieu4_bm25 = any('điều 4' in r['text'].lower() for r in results_bm25)
+print(f"[BM25] Điều 4 trong top 5: {'✓ CÓ' if dieu4_bm25 else '✗ KHÔNG'}")
 
-    passed = 0
+# ==================== ChromaDB ====================
+print("\n[ChromaDB] Testing...")
 
-    for case in CASES:
-        print(f"\n>> {case['name']}")
-        try:
-            # Skip guardrail by passing pre_extracted_claims
-            result = await run_pipeline(
-                user_input           = case["claims"][0]["claim"],
-                retrieval_method     = "hybrid_rrf",
-                pre_extracted_claims = case["claims"],
-                mode                 = "production",
-            )
+payload = json.dumps({"model": "bge-m3:latest", "input": [query]}).encode()
+req = urllib.request.Request(
+    "http://localhost:11434/api/embed",
+    data=payload,
+    headers={"Content-Type": "application/json"}
+)
+with urllib.request.urlopen(req, timeout=30) as resp:
+    vec = json.loads(resp.read())["embeddings"][0]
 
-            verdict = result.get("verdict", "?")
-            conf    = float(result.get("confidence", 0.0))
-            de      = result.get("direct_evidence")
+print(f"[ChromaDB] Embedding OK — dim={len(vec)}")
 
-            # Run the aggregator (single method — hybrid only for unit test)
-            rs        = [_FakeResult("hybrid_rrf", verdict, conf)]
-            score_res = compute_truthfulness_score(rs, hybrid_direct_evidence=de)
-            label     = score_res["label"]
-            score     = score_res["score"]
-            rule      = score_res["rule_applied"]
+db = chromadb.PersistentClient(
+    path=Path(r'C:\Users\ACER\Documents\Desktop\Fake News Detection\Fake-news-detections\RAG_LAW\Models\law_chroma').as_posix()
+)
+col = db.get_collection("law")
+results_chroma = col.query(query_embeddings=[vec], n_results=5)
 
-            ok = label == case["expected_label"]
-            if ok:
-                passed += 1
+print("[ChromaDB] Top 5 docs:")
+for i, (doc, dist) in enumerate(zip(results_chroma["documents"][0], results_chroma["distances"][0])):
+    sim = 1 - dist / 2
+    print(f"  #{i+1} sim={sim:.3f} | {doc[:120]}")
 
-            print(f"   verdict         = {verdict}")
-            print(f"   confidence      = {conf:.4f}")
-            print(f"   direct_evidence = {de}")
-            print(f"   score           = {score}")
-            print(f"   label           = {label}")
-            print(f"   rule            = {rule}")
-            print(f"   expected        = {case['expected_label']}")
-            print(f"   ---> {'PASS' if ok else 'FAIL'}")
+dieu4_chroma = any('điều 4' in doc.lower() for doc in results_chroma["documents"][0])
+print(f"[ChromaDB] Điều 4 trong top 5: {'✓ CÓ' if dieu4_chroma else '✗ KHÔNG'}")
 
-            # Print claim-level details
-            for i, d in enumerate(result.get("details", [])[:2]):
-                print(f"   [claim {i}] verdict={d.get('verdict')} reasoning={str(d.get('reasoning',''))[:80]}")
-
-        except Exception as exc:
-            import traceback
-            traceback.print_exc()
-            print(f"   ERROR: {exc}")
-
-    print("\n" + "=" * 65)
-    print(f"RESULT: {passed}/{len(CASES)} cases passed")
-    print("=" * 65)
-
-
-asyncio.run(main())
+# ==================== SUMMARY ====================
+print("\n" + "=" * 60)
+print("SUMMARY")
+print(f"  BM25:     Điều 4 {'✓ TÌM THẤY' if dieu4_bm25 else '✗ KHÔNG TÌM THẤY'}")
+print(f"  ChromaDB: Điều 4 {'✓ TÌM THẤY' if dieu4_chroma else '✗ KHÔNG TÌM THẤY'}")
+if not dieu4_bm25 and not dieu4_chroma:
+    print("  → Cả 2 đều miss → LLM không có context → reasoning sai")
+elif not dieu4_bm25:
+    print("  → BM25 miss → expansion map chưa đủ token")
+elif not dieu4_chroma:
+    print("  → ChromaDB miss → embedding không capture được context")
+else:
+    print("  → Cả 2 đều tìm thấy Điều 4 ✓ — vấn đề nằm ở evaluation prompt")
+print("=" * 60)

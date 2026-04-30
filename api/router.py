@@ -1,6 +1,6 @@
 import time
 from fastapi import APIRouter
-from api.schemas import VerificationRequest, VerificationResult, RetrievalResult
+from api.schemas import VerificationRequest, VerificationResult, RetrievalResult, QuickCheckResult
 from src.pipeline import run_pipeline
 from src.verdict_aggregator import compute_truthfulness_score
 from user_input_processing.Guardrail_input import check_input_validity
@@ -130,4 +130,83 @@ async def verify_claim(request: VerificationRequest):
         label                 = scoring_result["label"],
         rule_applied          = scoring_result["rule_applied"],
         processing_time_ms    = int((time.time() - start_time) * 1000),
+    )
+
+
+@router.post("/verify-quick", response_model=QuickCheckResult)
+async def verify_quick(request: VerificationRequest):
+    """Fast path: runs only hybrid_rrf (~25s vs ~6min for full pipeline)."""
+    start_time = time.time()
+
+    # ── Guardrail ─────────────────────────────────────────────────────────────
+    guardrail = await check_input_validity(request.text)
+    if guardrail["status"] == "REJECT":
+        return QuickCheckResult(
+            label              = "REJECTED",
+            final_verdict      = "ERROR",
+            truthfulness_score = 0.0,
+            rule_applied       = guardrail["message"],
+            processing_time_ms = int((time.time() - start_time) * 1000),
+        )
+
+    clean_query = guardrail.get("clean_query", request.text)
+
+    # ── Claim extraction ──────────────────────────────────────────────────────
+    all_claims = []
+    for chunk in chunk_query(clean_query):
+        all_claims.extend(await extract_atomic_claims(chunk))
+
+    if not all_claims:
+        return QuickCheckResult(
+            label              = "ERROR",
+            final_verdict      = "ERROR",
+            truthfulness_score = 0.0,
+            rule_applied       = "Không tìm thấy ý định pháp lý.",
+            processing_time_ms = int((time.time() - start_time) * 1000),
+        )
+
+    # ── Run hybrid_rrf only ───────────────────────────────────────────────────
+    result     = await run_pipeline(request.text, "hybrid_rrf", pre_extracted_claims=all_claims)
+    verdict    = result.get("verdict", "INSUFFICIENT")
+    confidence = float(result.get("confidence", 0.0))
+    direct_ev  = result.get("direct_evidence")
+    details    = result.get("details") or [{}]
+    reasoning  = details[0].get("reasoning") if details else None
+
+    # ── Score derivation (mirrors aggregator Rules 3+4 for single-method) ─────
+    if verdict == "CONTRADICTED":
+        score, label, final_verdict = 0.10, "FAKE", "CONTRADICTED"
+    elif verdict == "SUPPORTED" and direct_ev:
+        score         = confidence
+        label         = "REAL" if confidence >= 0.80 else "UNCERTAIN"
+        final_verdict = "SUPPORTED"
+    elif verdict == "PARTIAL":
+        score, label, final_verdict = round(confidence * 0.70, 4), "UNCERTAIN", "PARTIAL"
+    else:
+        # INSUFFICIENT or SUPPORTED without validated evidence
+        if confidence >= 0.80:
+            score, label = 0.58, "UNCERTAIN"
+        elif confidence >= 0.60:
+            score, label = 0.44, "FAKE"
+        else:
+            score, label = 0.25, "FAKE"
+        final_verdict = "INSUFFICIENT"
+
+    score = round(score, 4)
+
+    if label == "REAL":
+        rule_applied = f"Tìm thấy bằng chứng pháp lý trực tiếp ủng hộ tuyên bố (Điểm: {score:.2f})."
+    elif label == "UNCERTAIN":
+        rule_applied = f"Bằng chứng không đầy đủ hoặc chỉ gián tiếp (Điểm: {score:.2f}). Cần chuyên gia xem xét."
+    else:
+        rule_applied = f"Thiếu bằng chứng pháp lý hoặc tuyên bố mâu thuẫn với quy định (Điểm: {score:.2f})."
+
+    return QuickCheckResult(
+        label              = label,
+        final_verdict      = final_verdict,
+        truthfulness_score = score,
+        reasoning          = reasoning,
+        direct_evidence    = direct_ev,
+        rule_applied       = rule_applied,
+        processing_time_ms = int((time.time() - start_time) * 1000),
     )

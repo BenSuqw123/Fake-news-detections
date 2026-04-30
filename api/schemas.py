@@ -26,3 +26,13 @@ class VerificationResult(BaseModel):
     label:                  str
     rule_applied:           str
     processing_time_ms:     int
+
+
+class QuickCheckResult(BaseModel):
+    label:               str
+    final_verdict:       str
+    truthfulness_score:  float
+    reasoning:           Optional[str] = None
+    direct_evidence:     Optional[str] = None
+    rule_applied:        str
+    processing_time_ms:  int

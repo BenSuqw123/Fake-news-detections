@@ -1,3 +1,4 @@
+import re
 import json
 import ollama
 import asyncio
@@ -34,10 +35,49 @@ Ví dụ keywords tốt:
 
 Chỉ trả về JSON, không thêm bất kỳ text nào khác."""
 
+_META_COMMENT_PATTERNS = [
+    r"phần câu hỏi",
+    r"thuộc phạm vi",
+    r"ngoài phạm vi",
+    r"văn bản này",
+    r"đoạn văn",
+    r"câu hỏi này",
+    r"không có ý định",
+    r"không tìm thấy",
+    r"đây là",
+]
+
+
+def _is_garbage_claim(text: str) -> bool:
+    """Return True if the claim looks like a meta-comment from the LLM, not an actual claim."""
+    lower = text.lower()
+    if len(text.strip()) < 15:
+        return True
+    return any(re.search(p, lower) for p in _META_COMMENT_PATTERNS)
+
+
+def _make_fallback_claim(text: str) -> list:
+    """Construct a minimal claim dict directly from the input text."""
+    clean = text.strip()
+    if not clean.endswith(('.', '?', '!')):
+        clean += '.'
+    # Extract Điều references for keywords
+    articles = re.findall(r'Điều\s+\d+', clean, re.IGNORECASE)
+    keywords = ', '.join(articles) if articles else ""
+    return [{
+        "claim":         clean,
+        "keywords":      keywords,
+        "entities":      [],
+        "type":          "FACT",
+        "is_verifiable": True,
+    }]
+
 
 async def extract_atomic_claims(article_text: str) -> list:
     """
     Trích xuất các tuyên bố đơn lẻ (atomic claims) từ văn bản tiếng Việt.
+    Falls back to treating the raw input as a single claim if the LLM fails
+    or returns meta-comments instead of real claims.
     """
     if not article_text or len(article_text.strip()) < 10:
         return []
@@ -66,27 +106,31 @@ async def extract_atomic_claims(article_text: str) -> list:
 
         final_claims = []
         for c in raw_claims:
-            if c.get("claim") and len(c["claim"]) > 5:
-                clean_text = c["claim"].strip()
-                if not clean_text.endswith(('.', '?', '!')):
-                    clean_text += '.'
+            claim_text = (c.get("claim") or "").strip()
+            if not claim_text or _is_garbage_claim(claim_text):
+                continue
+            if not claim_text.endswith(('.', '?', '!')):
+                claim_text += '.'
+            final_claims.append({
+                "claim":         claim_text,
+                "keywords":      c.get("keywords", ""),
+                "entities":      c.get("entities", []),
+                "type":          c.get("type", "FACT"),
+                "is_verifiable": c.get("is_verifiable", True),
+            })
 
-                final_claims.append({
-                    "claim":         clean_text,
-                    "keywords":      c.get("keywords", ""),
-                    "entities":      c.get("entities", []),
-                    "type":          c.get("type", "FACT"),
-                    "is_verifiable": c.get("is_verifiable", True),
-                })
+        if not final_claims:
+            print(f"[ClaimExtractor] LLM returned no valid claims — using raw input as fallback.")
+            return _make_fallback_claim(article_text)
 
         return final_claims
 
     except json.JSONDecodeError:
-        print("❌ Lỗi: AI không trả về định dạng JSON chuẩn.")
-        return []
+        print("[ClaimExtractor] JSON parse error — using raw input as fallback.")
+        return _make_fallback_claim(article_text)
     except Exception as e:
-        print(f"❌ Lỗi trích xuất claim: {str(e)}")
-        return []
+        print(f"[ClaimExtractor] Error: {e} — using raw input as fallback.")
+        return _make_fallback_claim(article_text)
 
 
 if __name__ == "__main__":

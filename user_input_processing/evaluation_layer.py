@@ -44,6 +44,8 @@ LUẬT QUAN TRỌNG NHẤT:
 - Chỉ SUPPORTED khi tìm được điều khoản NÓI RÕ về đúng nội dung tuyên bố
 - Nếu tuyên bố về quyền X nhưng không tìm thấy điều khoản nào quy định quyền X → INSUFFICIENT
 - Nếu tuyên bố sai tên chức danh, sai tên cơ quan, sai quy trình → CONTRADICTED
+- Ví dụ: tuyên bố "công dân lập đảng độc lập" → Điều 7 (bầu cử/đầu phiếu) KHÔNG trực tiếp; phải tìm Điều 4 (vai trò lãnh đạo của Đảng Cộng sản) → CONTRADICTED
+- Ví dụ: tuyên bố "quyền tự do ngôn luận" → Điều 25 Hiến pháp quy định rõ → SUPPORTED
 
 Trả lời CHỈ bằng JSON, không thêm bất kỳ text nào khác:
 {
@@ -176,7 +178,10 @@ async def evaluate_final(
         if isinstance(llm_res.get("reasoning"), dict):
             llm_res["reasoning"] = str(llm_res["reasoning"])
         if isinstance(llm_res.get("direct_evidence"), dict):
-            llm_res["direct_evidence"] = str(llm_res["direct_evidence"])
+            de_dict = llm_res["direct_evidence"]
+            # Extract the first string value rather than stringifying the whole dict
+            extracted = next((v for v in de_dict.values() if isinstance(v, str)), None)
+            llm_res["direct_evidence"] = extracted if extracted else None
 
         verdict        = llm_res.get("verdict", "INSUFFICIENT")
         llm_confidence = float(llm_res.get("confidence", 0.0))

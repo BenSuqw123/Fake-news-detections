@@ -170,6 +170,93 @@
     }
 
     /* ═══════════════════════════════════════════
+       QUICK CHECK CARD
+    ═══════════════════════════════════════════ */
+    .quick-check-title {
+      font-size: .95rem;
+      font-weight: 600;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .quick-check-subtitle {
+      font-size: .78rem;
+      font-weight: 400;
+      color: var(--subtext);
+    }
+
+    .quick-row {
+      display: flex;
+      gap: 10px;
+      align-items: stretch;
+    }
+
+    .quick-input {
+      flex: 1;
+      padding: .8rem 1rem;
+      border: 2px solid var(--border);
+      border-radius: 10px;
+      font-family: inherit;
+      font-size: .95rem;
+      color: var(--text);
+      outline: none;
+      transition: border-color .2s, box-shadow .2s;
+      min-width: 0;
+    }
+    .quick-input:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(37,99,235,.14);
+    }
+    .quick-input::placeholder { color: var(--subtext); }
+
+    .quick-btn {
+      padding: .8rem 1.4rem;
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-family: inherit;
+      font-size: .95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .18s;
+      white-space: nowrap;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      flex-shrink: 0;
+    }
+    .quick-btn:hover:not(:disabled) { background: var(--primary-dk); }
+    .quick-btn:disabled { background: #94A3B8; cursor: not-allowed; }
+
+    .quick-result-area {
+      margin-top: 1.25rem;
+      border-top: 1px solid var(--border);
+      padding-top: 1.1rem;
+    }
+
+    .quick-loading {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--subtext);
+      font-size: .9rem;
+    }
+
+    .quick-label-row {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 10px;
+    }
+
+    .quick-score-text {
+      font-size: .9rem;
+      color: var(--subtext);
+    }
+
+    /* ═══════════════════════════════════════════
        LOADING CARD
     ═══════════════════════════════════════════ */
     .loading-card { text-align: center; }
@@ -458,7 +545,7 @@
       color: var(--danger);
     }
 
-    /* Evidence section header (📗 / 📕) */
+    /* Evidence section header */
     .evidence-section-hdr {
       font-size: .78rem;
       font-weight: 600;
@@ -540,6 +627,8 @@
       .methods-grid        { grid-template-columns: 1fr; }
       .card                { padding: 1.25rem; }
       .verdict-badge       { font-size: 1.1rem; padding: .5rem 1.75rem; }
+      .quick-row           { flex-direction: column; }
+      .quick-btn           { justify-content: center; }
     }
   </style>
 </head>
@@ -566,7 +655,7 @@
   <!-- ═══ MAIN ═══ -->
   <main class="main-content">
 
-    <!-- INPUT CARD -->
+    <!-- FULL VERIFY INPUT CARD -->
     <div class="card">
       <textarea
         id="inputText"
@@ -586,7 +675,62 @@
       <p class="info-hint">Hệ thống sẽ phân tích qua 3 phương pháp truy xuất song song</p>
     </div>
 
-    <!-- LOADING CARD -->
+    <!-- QUICK CHECK CARD -->
+    <div class="card">
+      <div class="quick-check-title">
+        ⚡ Quick Check
+        <span class="quick-check-subtitle">— chỉ chạy Hybrid RRF (~25s)</span>
+      </div>
+      <div class="quick-row">
+        <input
+          type="text"
+          id="quickInput"
+          class="quick-input"
+          placeholder="Enter news to verify..."
+          maxlength="2000"
+        />
+        <button id="quickBtn" class="quick-btn" onclick="verifyQuick()">
+          <span id="quickBtnContent">Quick Check</span>
+          <span id="quickBtnLoading" style="display:none; align-items:center; gap:6px">
+            <span class="btn-spinner"></span>Verifying...
+          </span>
+        </button>
+      </div>
+      <p id="quickInputError" class="input-error"></p>
+
+      <!-- Quick result area — shown after submission -->
+      <div id="quickResultArea" style="display:none" class="quick-result-area">
+
+        <!-- Loading state -->
+        <div id="quickLoading" class="quick-loading" style="display:none">
+          <span class="btn-spinner" style="border-color:rgba(37,99,235,.3); border-top-color:var(--primary); width:16px; height:16px; border-width:2px"></span>
+          Verifying... (~25s)
+        </div>
+
+        <!-- Error state -->
+        <div id="quickErrorArea" style="display:none">
+          <div class="error-content">
+            <span class="error-icon">⚠️</span>
+            <p class="error-message" id="quickErrorMsg"></p>
+          </div>
+        </div>
+
+        <!-- Success state -->
+        <div id="quickSuccessArea" style="display:none">
+          <div class="quick-label-row">
+            <span id="quickLabelBadge" class="verdict-badge" style="margin:0; padding:.4rem 1.5rem; font-size:1rem"></span>
+            <span id="quickScoreText" class="quick-score-text"></span>
+          </div>
+          <p id="quickRuleText" style="font-size:.82rem; color:var(--subtext); font-style:italic; margin-bottom:8px"></p>
+          <div id="quickReasoningBlock" class="reasoning-block" style="display:none"></div>
+          <div id="quickDirectEvBlock" class="direct-ev-block" style="display:none"></div>
+          <span id="quickTimeBadge" class="time-badge" style="margin-top:10px; display:inline-block"></span>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- LOADING CARD (full verify) -->
     <div id="loadingCard" class="card loading-card" style="display:none">
       <h3>Đang xử lý yêu cầu của bạn</h3>
       <div class="pipeline-steps">
@@ -606,7 +750,7 @@
       <div id="elapsedTimer" class="elapsed-timer">Đang xử lý... 00:00</div>
     </div>
 
-    <!-- ERROR CARD -->
+    <!-- ERROR CARD (full verify) -->
     <div id="errorCard" class="card error-card" style="display:none">
       <div class="error-content">
         <span class="error-icon">⚠️</span>
@@ -614,7 +758,7 @@
       </div>
     </div>
 
-    <!-- RESULTS SECTION -->
+    <!-- RESULTS SECTION (full verify) -->
     <div id="resultsSection" style="display:none">
 
       <!-- VERDICT HERO -->
@@ -738,17 +882,21 @@
     }
 
     /* ═══════════════════════════════════════════
-       UI STATE TOGGLE
+       UI STATE TOGGLE — FULL VERIFY
+       FIX: only hide resultsSection/errorCard when turning ON (on=true).
+       Previously they were always set to 'none', which caused the finally
+       block to hide results that renderResults() had just made visible.
     ═══════════════════════════════════════════ */
     function setLoadingState(on) {
-      document.getElementById('submitBtn').disabled     = on;
-      document.getElementById('btnContent').style.display = on ? 'none'   : 'inline';
-      document.getElementById('btnLoading').style.display = on ? 'inline' : 'none';
-      document.getElementById('loadingCard').style.display = on ? 'block' : 'none';
-      document.getElementById('resultsSection').style.display = 'none';
-      document.getElementById('errorCard').style.display      = 'none';
+      document.getElementById('submitBtn').disabled        = on;
+      document.getElementById('btnContent').style.display  = on ? 'none'   : 'inline';
+      document.getElementById('btnLoading').style.display  = on ? 'inline' : 'none';
+      document.getElementById('loadingCard').style.display = on ? 'block'  : 'none';
 
       if (on) {
+        // Starting a new request — clear previous output
+        document.getElementById('resultsSection').style.display = 'none';
+        document.getElementById('errorCard').style.display      = 'none';
         resetLoadingSteps();
         startLoadingAnimation();
         startTimer();
@@ -785,7 +933,7 @@
     }
 
     /* ═══════════════════════════════════════════
-       MAIN SUBMIT
+       MAIN SUBMIT — FULL VERIFY
     ═══════════════════════════════════════════ */
     async function verifyClaim() {
       const text = document.getElementById('inputText').value.trim();
@@ -813,6 +961,7 @@
         }
 
       } catch (err) {
+        console.error('[verifyClaim]', err);
         if (err instanceof TypeError) {
           showError('Không thể kết nối đến máy chủ. Vui lòng thử lại.');
         } else {
@@ -824,17 +973,17 @@
     }
 
     /* ═══════════════════════════════════════════
-       ERROR DISPLAY
+       ERROR DISPLAY — FULL VERIFY
     ═══════════════════════════════════════════ */
     function showError(msg) {
-      document.getElementById('errorMessage').textContent = msg;
-      document.getElementById('errorCard').style.display      = 'block';
+      document.getElementById('errorMessage').textContent    = msg;
+      document.getElementById('errorCard').style.display     = 'block';
       document.getElementById('resultsSection').style.display = 'none';
       document.getElementById('errorCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 
     /* ═══════════════════════════════════════════
-       RESULTS RENDER
+       RESULTS RENDER — FULL VERIFY
     ═══════════════════════════════════════════ */
     function renderResults(data) {
       const labelInfo = LABEL_MAP[data.label] || LABEL_MAP.UNCERTAIN;
@@ -879,18 +1028,15 @@
       const pctEl  = document.getElementById('ringPercent');
       const target = Math.round(score * 100);
 
-      // Reset without transition
       circle.style.transition       = 'none';
       circle.style.stroke           = color;
       circle.style.strokeDashoffset = String(CIRCUMFERENCE);
       pctEl.textContent = '0%';
 
-      // Force reflow, then animate
       circle.getBoundingClientRect();
       circle.style.transition       = 'stroke-dashoffset 1.5s ease';
       circle.style.strokeDashoffset = String(CIRCUMFERENCE * (1 - score));
 
-      // Animated percentage counter (ease-out cubic)
       const duration = 1500;
       const t0 = Date.now();
       function tick() {
@@ -910,7 +1056,6 @@
       const vInfo   = VERDICT_MAP[method.verdict] || VERDICT_MAP.INSUFFICIENT;
       const confPct = Math.round(method.confidence * 100);
 
-      // ── Evidence lists ──────────────────────────────────────────────────
       const supportDocs = method.support_docs && method.support_docs.length
         ? method.support_docs
         : method.top_docs || [];
@@ -936,7 +1081,6 @@
 
       const totalCount = supportDocs.length + contraDocs.length;
 
-      // ── Reasoning + Direct evidence ─────────────────────────────────────
       const reasoningHtml = method.reasoning
         ? '<div class="reasoning-block"><strong>⚖️ Lý luận của AI:</strong>' + escHtml(method.reasoning) + '</div>'
         : '';
@@ -971,6 +1115,120 @@
           '</div>' +
         '</div>'
       );
+    }
+
+    /* ═══════════════════════════════════════════
+       QUICK CHECK — SUBMIT
+    ═══════════════════════════════════════════ */
+    async function verifyQuick() {
+      const text   = document.getElementById('quickInput').value.trim();
+      const errEl  = document.getElementById('quickInputError');
+      const btn    = document.getElementById('quickBtn');
+
+      if (!text) {
+        errEl.textContent = 'Vui lòng nhập nội dung.';
+        return;
+      }
+      if (text.length < 10) {
+        errEl.textContent = 'Nội dung quá ngắn (ít nhất 10 ký tự).';
+        return;
+      }
+      errEl.textContent = '';
+
+      // Set loading state
+      btn.disabled = true;
+      document.getElementById('quickBtnContent').style.display  = 'none';
+      document.getElementById('quickBtnLoading').style.display  = 'inline-flex';
+
+      const resultArea = document.getElementById('quickResultArea');
+      resultArea.style.display = 'block';
+      document.getElementById('quickLoading').style.display     = 'flex';
+      document.getElementById('quickErrorArea').style.display   = 'none';
+      document.getElementById('quickSuccessArea').style.display = 'none';
+
+      try {
+        const resp = await fetch('/verify-quick', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text }),
+        });
+
+        if (!resp.ok) {
+          throw new Error('Lỗi máy chủ (HTTP ' + resp.status + ')');
+        }
+
+        const data = await resp.json();
+
+        if (data.label === 'ERROR' || data.label === 'REJECTED') {
+          showQuickError(data.rule_applied || 'Có lỗi xảy ra trong quá trình xử lý.');
+        } else {
+          renderQuickResult(data);
+        }
+
+      } catch (err) {
+        console.error('[verifyQuick]', err);
+        showQuickError(err instanceof TypeError
+          ? 'Không thể kết nối đến máy chủ. Vui lòng thử lại.'
+          : err.message);
+      } finally {
+        btn.disabled = false;
+        document.getElementById('quickBtnContent').style.display = 'inline';
+        document.getElementById('quickBtnLoading').style.display = 'none';
+        document.getElementById('quickLoading').style.display    = 'none';
+      }
+    }
+
+    /* ═══════════════════════════════════════════
+       QUICK CHECK — ERROR DISPLAY
+    ═══════════════════════════════════════════ */
+    function showQuickError(msg) {
+      document.getElementById('quickErrorMsg').textContent      = msg;
+      document.getElementById('quickErrorArea').style.display   = 'flex';
+      document.getElementById('quickSuccessArea').style.display = 'none';
+    }
+
+    /* ═══════════════════════════════════════════
+       QUICK CHECK — RESULT RENDER
+    ═══════════════════════════════════════════ */
+    function renderQuickResult(data) {
+      const labelInfo = LABEL_MAP[data.label] || LABEL_MAP.UNCERTAIN;
+      const scorePct  = Math.round(data.truthfulness_score * 100);
+
+      const badge = document.getElementById('quickLabelBadge');
+      badge.textContent        = labelInfo.emoji + ' ' + labelInfo.text;
+      badge.className          = 'verdict-badge ' + labelInfo.cssClass;
+      badge.style.margin       = '0';
+      badge.style.padding      = '.4rem 1.5rem';
+      badge.style.fontSize     = '1rem';
+      badge.style.background   = labelInfo.color;
+
+      document.getElementById('quickScoreText').textContent =
+        'Điểm tin cậy: ' + scorePct + '%';
+
+      document.getElementById('quickRuleText').textContent =
+        data.rule_applied || '';
+
+      const reasoningEl = document.getElementById('quickReasoningBlock');
+      if (data.reasoning) {
+        reasoningEl.innerHTML     = '<strong>⚖️ Lý luận của AI:</strong>' + escHtml(data.reasoning);
+        reasoningEl.style.display = 'block';
+      } else {
+        reasoningEl.style.display = 'none';
+      }
+
+      const directEvEl = document.getElementById('quickDirectEvBlock');
+      if (data.direct_evidence) {
+        directEvEl.innerHTML     = '<strong>🔍 Điều khoản trực tiếp:</strong>' + escHtml(data.direct_evidence);
+        directEvEl.style.display = 'block';
+      } else {
+        directEvEl.style.display = 'none';
+      }
+
+      document.getElementById('quickTimeBadge').textContent =
+        '⏱️ ' + formatTime(data.processing_time_ms);
+
+      document.getElementById('quickSuccessArea').style.display = 'block';
+      document.getElementById('quickErrorArea').style.display   = 'none';
     }
 
     /* ═══════════════════════════════════════════
