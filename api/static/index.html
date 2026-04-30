@@ -112,6 +112,7 @@
       box-shadow: 0 0 0 3px rgba(37,99,235,.14);
     }
     textarea::placeholder { color: var(--subtext); }
+    textarea:disabled { background: var(--bg); color: var(--subtext); cursor: not-allowed; }
 
     .char-counter {
       text-align: right;
@@ -209,6 +210,7 @@
       box-shadow: 0 0 0 3px rgba(37,99,235,.14);
     }
     .quick-input::placeholder { color: var(--subtext); }
+    .quick-input:disabled { background: var(--bg); color: var(--subtext); cursor: not-allowed; }
 
     .quick-btn {
       padding: .8rem 1.4rem;
@@ -236,14 +238,6 @@
       padding-top: 1.1rem;
     }
 
-    .quick-loading {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      color: var(--subtext);
-      font-size: .9rem;
-    }
-
     .quick-label-row {
       display: flex;
       align-items: center;
@@ -254,6 +248,220 @@
     .quick-score-text {
       font-size: .9rem;
       color: var(--subtext);
+    }
+
+    /* ═══════════════════════════════════════════
+       QUICK CHECK — MULTI-STAGE LOADING
+    ═══════════════════════════════════════════ */
+    .qc-progress-track {
+      height: 8px;
+      background: var(--border);
+      border-radius: 999px;
+      overflow: hidden;
+      margin-bottom: 14px;
+    }
+
+    .qc-progress-bar {
+      height: 100%;
+      border-radius: 999px;
+      width: 0%;
+      background: linear-gradient(90deg, #1D4ED8, #60A5FA);
+      transition: background 0.6s ease;
+    }
+
+    .qc-progress-bar.running {
+      animation: qcFill 150s linear forwards;
+    }
+
+    .qc-progress-bar.stage-purple {
+      background: linear-gradient(90deg, #6D28D9, #A78BFA);
+    }
+
+    .qc-progress-bar.stage-amber {
+      background: linear-gradient(90deg, #B45309, #FCD34D);
+    }
+
+    .qc-progress-bar.stage-green {
+      background: linear-gradient(90deg, #15803D, #4ADE80);
+    }
+
+    @keyframes qcFill {
+      from { width: 0%; }
+      to   { width: 90%; }
+    }
+
+    .qc-stage-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+      min-height: 22px;
+    }
+
+    .qc-pulse-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: var(--primary);
+      flex-shrink: 0;
+      animation: pulseDot 1.2s ease-in-out infinite;
+    }
+
+    @keyframes pulseDot {
+      0%, 100% { transform: scale(1);   opacity: 1;   }
+      50%       { transform: scale(1.6); opacity: 0.45; }
+    }
+
+    .qc-stage-label {
+      font-size: .88rem;
+      color: var(--text);
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .qc-stage-label.visible { opacity: 1; }
+
+    .qc-timer-row {
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 12px;
+      font-size: .82rem;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .qc-elapsed   { color: var(--subtext); }
+    .qc-countdown { color: var(--primary); font-weight: 500; }
+
+    .qc-warning {
+      background: #FEF3C7;
+      border: 1px solid #FDE68A;
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: .84rem;
+      color: #92400E;
+      margin-bottom: 10px;
+      animation: fadeInUp .3s ease;
+    }
+
+    .qc-cancel-btn {
+      padding: 6px 16px;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: .84rem;
+      color: var(--subtext);
+      cursor: pointer;
+      transition: background .15s, border-color .15s, color .15s;
+    }
+    .qc-cancel-btn:hover {
+      background: #FEE2E2;
+      border-color: #FECACA;
+      color: var(--danger);
+    }
+
+    /* ═══════════════════════════════════════════
+       COMPLETION FLASH
+    ═══════════════════════════════════════════ */
+    .qc-completion-flash {
+      text-align: center;
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: var(--success);
+      padding: 10px;
+      border-radius: 8px;
+      background: #DCFCE7;
+      border: 1px solid #BBF7D0;
+      margin-bottom: 10px;
+    }
+
+    .qc-completion-flash.flash-anim {
+      animation: completionFlash 1s ease forwards;
+    }
+
+    @keyframes completionFlash {
+      0%   { opacity: 0; transform: scale(0.85); }
+      25%  { opacity: 1; transform: scale(1.04); }
+      65%  { opacity: 1; transform: scale(1);    }
+      100% { opacity: 0; transform: scale(1);    }
+    }
+
+    /* ═══════════════════════════════════════════
+       SCORE BAR (QUICK CHECK)
+    ═══════════════════════════════════════════ */
+    .qc-score-section { margin: 8px 0 12px; }
+
+    .qc-score-track {
+      height: 10px;
+      background: var(--border);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .qc-score-fill {
+      height: 100%;
+      border-radius: 999px;
+      width: 0%;
+      background: linear-gradient(90deg, #DC2626 0%, #D97706 50%, #16A34A 100%);
+      transition: width 1.2s ease-out;
+    }
+
+    /* ═══════════════════════════════════════════
+       RESULT REVEAL ANIMATIONS
+    ═══════════════════════════════════════════ */
+    .slide-up-anim {
+      animation: slideUp 0.5s ease both;
+    }
+
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(22px); }
+      to   { opacity: 1; transform: translateY(0);    }
+    }
+
+    .label-pop {
+      animation: labelPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    }
+
+    @keyframes labelPop {
+      from { transform: scale(0.5); opacity: 0; }
+      to   { transform: scale(1);   opacity: 1; }
+    }
+
+    .label-shake {
+      animation: labelPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both,
+                 fakeLabelShake 0.45s ease 0.4s;
+    }
+
+    @keyframes fakeLabelShake {
+      0%,100% { transform: translateX(0);   }
+      20%     { transform: translateX(-7px); }
+      40%     { transform: translateX(7px);  }
+      60%     { transform: translateX(-4px); }
+      80%     { transform: translateX(4px);  }
+    }
+
+    /* ═══════════════════════════════════════════
+       VERDICT BADGE — GRADIENTS & EFFECTS
+    ═══════════════════════════════════════════ */
+    .verdict-badge.success {
+      background: linear-gradient(135deg, #15803D, #22C55E) !important;
+      box-shadow: 0 0 18px rgba(22, 163, 74, 0.45);
+    }
+
+    .verdict-badge.danger {
+      background: linear-gradient(135deg, #B91C1C, #EF4444) !important;
+    }
+
+    .verdict-badge.warning {
+      background: linear-gradient(135deg, #B45309, #F59E0B) !important;
+      animation: uncertainPulse 2s ease-in-out infinite;
+    }
+
+    @keyframes uncertainPulse {
+      0%, 100% { box-shadow: 0 0 0 0   rgba(217,119,6,0.5); }
+      50%       { box-shadow: 0 0 0 8px rgba(217,119,6,0);   }
     }
 
     /* ═══════════════════════════════════════════
@@ -335,9 +543,6 @@
       margin-bottom: 1.5rem;
       letter-spacing: .04em;
     }
-    .verdict-badge.success { background: var(--success); }
-    .verdict-badge.danger  { background: var(--danger); }
-    .verdict-badge.warning { background: var(--warning); }
 
     .ring-wrapper {
       position: relative;
@@ -509,12 +714,14 @@
       line-height: 1.55;
       display: -webkit-box;
       -webkit-line-clamp: 2;
+      line-clamp: 2;
       -webkit-box-orient: vertical;
       overflow: hidden;
     }
     .evidence-text.expanded {
       display: block;
       -webkit-line-clamp: unset;
+      line-clamp: unset;
       overflow: visible;
     }
     .expand-btn {
@@ -537,15 +744,9 @@
       font-style: italic;
     }
 
-    /* Contradiction evidence (red accent) */
-    .evidence-item.contra {
-      border-left-color: var(--danger);
-    }
-    .evidence-item.contra .evidence-source {
-      color: var(--danger);
-    }
+    .evidence-item.contra { border-left-color: var(--danger); }
+    .evidence-item.contra .evidence-source { color: var(--danger); }
 
-    /* Evidence section header */
     .evidence-section-hdr {
       font-size: .78rem;
       font-weight: 600;
@@ -558,7 +759,6 @@
     .evidence-section-hdr.support { color: var(--success); }
     .evidence-section-hdr.contra  { color: var(--danger);  }
 
-    /* Reasoning / Direct-evidence blocks */
     .reasoning-block, .direct-ev-block {
       margin-top: 10px;
       padding: 10px 12px;
@@ -629,6 +829,7 @@
       .verdict-badge       { font-size: 1.1rem; padding: .5rem 1.75rem; }
       .quick-row           { flex-direction: column; }
       .quick-btn           { justify-content: center; }
+      .qc-timer-row        { flex-direction: column; gap: 2px; }
     }
   </style>
 </head>
@@ -672,27 +873,27 @@
           <span class="btn-spinner"></span>&nbsp;Đang phân tích...
         </span>
       </button>
-      <p class="info-hint">Hệ thống sẽ phân tích qua 3 phương pháp truy xuất song song</p>
+      <p class="info-hint">Hệ thống sẽ phân tích qua 3 phương pháp truy xuất song song (~7-8 phút)</p>
     </div>
 
     <!-- QUICK CHECK CARD -->
     <div class="card">
       <div class="quick-check-title">
         ⚡ Quick Check
-        <span class="quick-check-subtitle">— chỉ chạy Hybrid RRF (~25s)</span>
+        <span class="quick-check-subtitle">— chỉ chạy Hybrid RRF (~2-3 phút)</span>
       </div>
       <div class="quick-row">
         <input
           type="text"
           id="quickInput"
           class="quick-input"
-          placeholder="Enter news to verify..."
+          placeholder="Nhập tin tức cần kiểm tra..."
           maxlength="2000"
         />
         <button id="quickBtn" class="quick-btn" onclick="verifyQuick()">
           <span id="quickBtnContent">Quick Check</span>
           <span id="quickBtnLoading" style="display:none; align-items:center; gap:6px">
-            <span class="btn-spinner"></span>Verifying...
+            <span class="btn-spinner" style="width:15px;height:15px;border-width:2px"></span>Đang chạy...
           </span>
         </button>
       </div>
@@ -701,11 +902,27 @@
       <!-- Quick result area — shown after submission -->
       <div id="quickResultArea" style="display:none" class="quick-result-area">
 
-        <!-- Loading state -->
-        <div id="quickLoading" class="quick-loading" style="display:none">
-          <span class="btn-spinner" style="border-color:rgba(37,99,235,.3); border-top-color:var(--primary); width:16px; height:16px; border-width:2px"></span>
-          Verifying... (~25s)
+        <!-- Loading state — multi-stage -->
+        <div id="quickLoading" style="display:none">
+          <div class="qc-progress-track">
+            <div id="qcProgressBar" class="qc-progress-bar"></div>
+          </div>
+          <div class="qc-stage-row">
+            <span class="qc-pulse-dot"></span>
+            <span id="qcStageLabel" class="qc-stage-label"></span>
+          </div>
+          <div class="qc-timer-row">
+            <span id="qcElapsedText" class="qc-elapsed">Đã chạy: 0s</span>
+            <span id="qcCountdownText" class="qc-countdown">Còn khoảng: 2 phút 30 giây</span>
+          </div>
+          <div id="qcWarning" class="qc-warning" style="display:none">
+            ⚠️ Hệ thống đang bận, vui lòng chờ thêm...
+          </div>
+          <button class="qc-cancel-btn" onclick="cancelQuick()">✕ Hủy</button>
         </div>
+
+        <!-- Completion flash -->
+        <div id="qcCompletionFlash" class="qc-completion-flash" style="display:none">✅ Hoàn thành!</div>
 
         <!-- Error state -->
         <div id="quickErrorArea" style="display:none">
@@ -721,6 +938,11 @@
             <span id="quickLabelBadge" class="verdict-badge" style="margin:0; padding:.4rem 1.5rem; font-size:1rem"></span>
             <span id="quickScoreText" class="quick-score-text"></span>
           </div>
+          <div class="qc-score-section">
+            <div class="qc-score-track">
+              <div id="qcScoreFill" class="qc-score-fill"></div>
+            </div>
+          </div>
           <p id="quickRuleText" style="font-size:.82rem; color:var(--subtext); font-style:italic; margin-bottom:8px"></p>
           <div id="quickReasoningBlock" class="reasoning-block" style="display:none"></div>
           <div id="quickDirectEvBlock" class="direct-ev-block" style="display:none"></div>
@@ -732,7 +954,7 @@
 
     <!-- LOADING CARD (full verify) -->
     <div id="loadingCard" class="card loading-card" style="display:none">
-      <h3>Đang xử lý yêu cầu của bạn</h3>
+      <h3>Đang xử lý yêu cầu của bạn <span style="font-size:.8em; opacity:.6">(~7-8 phút)</span></h3>
       <div class="pipeline-steps">
         <div class="pipeline-step" id="step1">
           <span class="step-dot"></span>🛡️ Kiểm tra đầu vào...
@@ -827,11 +1049,26 @@
       REJECTED: { emoji: '🚫', text: 'TỪ CHỐI',        cssClass: 'danger',  color: '#DC2626' },
     };
 
+    const QUICK_STAGES = [
+      { time: 0,   label: '🔍 Đang tìm kiếm văn bản pháp luật liên quan...', colorClass: ''            },
+      { time: 15,  label: '📚 Đang phân tích BM25 + ChromaDB...',             colorClass: ''            },
+      { time: 45,  label: '⚖️ Đang đánh giá bằng AI (llama3.2)...',          colorClass: 'stage-purple'},
+      { time: 90,  label: '📝 Đang tổng hợp kết quả...',                      colorClass: 'stage-purple'},
+      { time: 150, label: '⏳ Đang hoàn thiện phân tích...',                  colorClass: 'stage-amber' },
+    ];
+
     /* ═══════════════════════════════════════════
-       STATE
+       STATE — FULL VERIFY
     ═══════════════════════════════════════════ */
     let timerInterval = null;
     let stepTimeouts  = [];
+
+    /* ═══════════════════════════════════════════
+       STATE — QUICK CHECK
+    ═══════════════════════════════════════════ */
+    let quickAbortCtrl      = null;
+    let quickLoadingInterval = null;
+    let quickStartTime      = 0;
 
     /* ═══════════════════════════════════════════
        CHARACTER COUNTER
@@ -841,7 +1078,7 @@
     }
 
     /* ═══════════════════════════════════════════
-       LOADING ANIMATION
+       LOADING ANIMATION — FULL VERIFY
     ═══════════════════════════════════════════ */
     function startLoadingAnimation() {
       ['step1', 'step2', 'step3', 'step4'].forEach((id, i) => {
@@ -863,7 +1100,7 @@
     }
 
     /* ═══════════════════════════════════════════
-       ELAPSED TIMER
+       ELAPSED TIMER — FULL VERIFY
     ═══════════════════════════════════════════ */
     function startTimer() {
       const start = Date.now();
@@ -882,10 +1119,7 @@
     }
 
     /* ═══════════════════════════════════════════
-       UI STATE TOGGLE — FULL VERIFY
-       FIX: only hide resultsSection/errorCard when turning ON (on=true).
-       Previously they were always set to 'none', which caused the finally
-       block to hide results that renderResults() had just made visible.
+       UI STATE — FULL VERIFY
     ═══════════════════════════════════════════ */
     function setLoadingState(on) {
       document.getElementById('submitBtn').disabled        = on;
@@ -894,7 +1128,6 @@
       document.getElementById('loadingCard').style.display = on ? 'block'  : 'none';
 
       if (on) {
-        // Starting a new request — clear previous output
         document.getElementById('resultsSection').style.display = 'none';
         document.getElementById('errorCard').style.display      = 'none';
         resetLoadingSteps();
@@ -906,7 +1139,7 @@
     }
 
     /* ═══════════════════════════════════════════
-       INPUT VALIDATION
+       INPUT VALIDATION — FULL VERIFY
     ═══════════════════════════════════════════ */
     function validateInput(text) {
       const errEl = document.getElementById('inputError');
@@ -988,35 +1221,28 @@
     function renderResults(data) {
       const labelInfo = LABEL_MAP[data.label] || LABEL_MAP.UNCERTAIN;
 
-      // Hero badge
       const badgeEl = document.getElementById('verdictBadge');
       badgeEl.textContent = labelInfo.emoji + ' ' + labelInfo.text;
       badgeEl.className   = 'verdict-badge ' + labelInfo.cssClass;
 
-      // Rule text & time badge
       document.getElementById('ruleText').textContent  = data.rule_applied || '';
       document.getElementById('timeBadge').textContent = '⏱️ Xử lý trong ' + formatTime(data.processing_time_ms);
 
-      // Ring animation
       animateRing(data.truthfulness_score, labelInfo.color);
 
-      // Method cards
       const grid = document.getElementById('methodsGrid');
       grid.innerHTML = (data.retrieval_comparison || [])
         .map((m, i) => buildMethodCard(m, i))
         .join('');
 
-      // Show section
       document.getElementById('resultsSection').style.display = 'block';
 
-      // Animate confidence bars after paint
       requestAnimationFrame(() => {
         document.querySelectorAll('.conf-fill[data-target]').forEach(el => {
           el.style.width = el.dataset.target;
         });
       });
 
-      // Smooth scroll to results
       document.getElementById('resultsSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 
@@ -1118,12 +1344,148 @@
     }
 
     /* ═══════════════════════════════════════════
+       QUICK CHECK — LOADING ENGINE
+    ═══════════════════════════════════════════ */
+    function startQuickLoading() {
+      quickStartTime = Date.now();
+
+      // Reset and arm progress bar CSS animation
+      const bar = document.getElementById('qcProgressBar');
+      bar.className = 'qc-progress-bar';
+      bar.style.cssText = 'width:0%; transition:none;';
+      bar.getBoundingClientRect(); // force reflow before adding animation
+      bar.classList.add('running');
+
+      // Initial stage
+      const labelEl = document.getElementById('qcStageLabel');
+      labelEl.textContent = QUICK_STAGES[0].label;
+      labelEl.className   = 'qc-stage-label visible';
+      labelEl.dataset.stageIdx = '0';
+
+      document.getElementById('qcWarning').style.display = 'none';
+
+      quickLoadingInterval = setInterval(function() {
+        const elapsed = Math.floor((Date.now() - quickStartTime) / 1000);
+
+        // Elapsed display
+        const em = Math.floor(elapsed / 60);
+        const es = elapsed % 60;
+        document.getElementById('qcElapsedText').textContent =
+          em > 0 ? ('Đã chạy: ' + em + 'm ' + es + 's') : ('Đã chạy: ' + es + 's');
+
+        // Countdown display
+        const remaining = Math.max(0, 150 - elapsed);
+        const rm = Math.floor(remaining / 60);
+        const rs = remaining % 60;
+        let cdText;
+        if (remaining > 60)      cdText = 'Còn khoảng: ' + rm + ' phút ' + rs + ' giây';
+        else if (remaining > 0)  cdText = 'Còn khoảng: ' + rs + ' giây';
+        else                     cdText = 'Đang hoàn thiện phân tích...';
+        document.getElementById('qcCountdownText').textContent = cdText;
+
+        // Stage switching
+        let stageIdx = 0;
+        for (let i = QUICK_STAGES.length - 1; i >= 0; i--) {
+          if (elapsed >= QUICK_STAGES[i].time) { stageIdx = i; break; }
+        }
+
+        if (labelEl.dataset.stageIdx !== String(stageIdx)) {
+          labelEl.dataset.stageIdx = String(stageIdx);
+          labelEl.classList.remove('visible');
+          setTimeout(function() {
+            labelEl.textContent = QUICK_STAGES[stageIdx].label;
+            labelEl.classList.add('visible');
+          }, 300);
+
+          // Update bar color
+          bar.classList.remove('stage-purple', 'stage-amber');
+          if (QUICK_STAGES[stageIdx].colorClass) {
+            bar.classList.add(QUICK_STAGES[stageIdx].colorClass);
+          }
+        }
+
+        // Warning after 3 minutes
+        if (elapsed >= 180) {
+          document.getElementById('qcWarning').style.display = 'block';
+        }
+      }, 1000);
+    }
+
+    function stopQuickLoading() {
+      if (quickLoadingInterval) {
+        clearInterval(quickLoadingInterval);
+        quickLoadingInterval = null;
+      }
+    }
+
+    function completeQCProgressBar() {
+      const bar = document.getElementById('qcProgressBar');
+      // Capture animated position before removing animation
+      const currentW  = bar.getBoundingClientRect().width;
+      const parentW   = bar.parentElement.getBoundingClientRect().width;
+      const currentPct = parentW > 0 ? (currentW / parentW * 100).toFixed(1) : 0;
+
+      bar.classList.remove('running', 'stage-purple', 'stage-amber');
+      bar.style.animation  = 'none';
+      bar.style.width      = currentPct + '%';
+      bar.style.transition = 'none';
+      bar.getBoundingClientRect(); // reflow so transition applies from current position
+
+      bar.style.transition = 'width 0.5s ease, background 0.3s ease';
+      bar.style.width      = '100%';
+      bar.classList.add('stage-green');
+    }
+
+    function showCompletionFlash() {
+      const flash = document.getElementById('qcCompletionFlash');
+      flash.style.display = 'block';
+      flash.classList.remove('flash-anim');
+      flash.getBoundingClientRect();
+      flash.classList.add('flash-anim');
+      setTimeout(function() {
+        flash.style.display = 'none';
+        flash.classList.remove('flash-anim');
+      }, 1000);
+    }
+
+    function resetQuickUI() {
+      const btn = document.getElementById('quickBtn');
+      btn.disabled = false;
+      document.getElementById('quickInput').disabled = false;
+      document.getElementById('quickBtnContent').style.display = 'inline';
+      document.getElementById('quickBtnLoading').style.display = 'none';
+
+      document.getElementById('quickResultArea').style.display = 'none';
+      document.getElementById('quickLoading').style.display    = 'none';
+
+      const bar = document.getElementById('qcProgressBar');
+      bar.className = 'qc-progress-bar';
+      bar.style.cssText = 'width:0%; transition:none; animation:none;';
+
+      const labelEl = document.getElementById('qcStageLabel');
+      labelEl.textContent = '';
+      labelEl.className   = 'qc-stage-label';
+      labelEl.dataset.stageIdx = '';
+    }
+
+    /* ═══════════════════════════════════════════
+       QUICK CHECK — CANCEL
+    ═══════════════════════════════════════════ */
+    function cancelQuick() {
+      if (quickAbortCtrl) {
+        quickAbortCtrl.abort();
+        quickAbortCtrl = null;
+      }
+      stopQuickLoading();
+      resetQuickUI();
+    }
+
+    /* ═══════════════════════════════════════════
        QUICK CHECK — SUBMIT
     ═══════════════════════════════════════════ */
     async function verifyQuick() {
-      const text   = document.getElementById('quickInput').value.trim();
-      const errEl  = document.getElementById('quickInputError');
-      const btn    = document.getElementById('quickBtn');
+      const text  = document.getElementById('quickInput').value.trim();
+      const errEl = document.getElementById('quickInputError');
 
       if (!text) {
         errEl.textContent = 'Vui lòng nhập nội dung.';
@@ -1135,22 +1497,30 @@
       }
       errEl.textContent = '';
 
-      // Set loading state
-      btn.disabled = true;
-      document.getElementById('quickBtnContent').style.display  = 'none';
-      document.getElementById('quickBtnLoading').style.display  = 'inline-flex';
+      // Disable inputs
+      document.getElementById('quickBtn').disabled  = true;
+      document.getElementById('quickInput').disabled = true;
+      document.getElementById('quickBtnContent').style.display = 'none';
+      document.getElementById('quickBtnLoading').style.display = 'inline-flex';
 
-      const resultArea = document.getElementById('quickResultArea');
-      resultArea.style.display = 'block';
-      document.getElementById('quickLoading').style.display     = 'flex';
-      document.getElementById('quickErrorArea').style.display   = 'none';
-      document.getElementById('quickSuccessArea').style.display = 'none';
+      // Show loading UI
+      document.getElementById('quickResultArea').style.display   = 'block';
+      document.getElementById('quickLoading').style.display      = 'block';
+      document.getElementById('quickErrorArea').style.display    = 'none';
+      document.getElementById('quickSuccessArea').style.display  = 'none';
+      document.getElementById('qcCompletionFlash').style.display = 'none';
+
+      startQuickLoading();
+      quickAbortCtrl = new AbortController();
+
+      let aborted = false;
 
       try {
         const resp = await fetch('/verify-quick', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ text }),
+          signal: quickAbortCtrl.signal,
         });
 
         if (!resp.ok) {
@@ -1159,22 +1529,38 @@
 
         const data = await resp.json();
 
-        if (data.label === 'ERROR' || data.label === 'REJECTED') {
-          showQuickError(data.rule_applied || 'Có lỗi xảy ra trong quá trình xử lý.');
-        } else {
-          renderQuickResult(data);
-        }
+        stopQuickLoading();
+        completeQCProgressBar();
+        showCompletionFlash();
+
+        setTimeout(function() {
+          document.getElementById('quickLoading').style.display = 'none';
+          if (data.label === 'ERROR' || data.label === 'REJECTED') {
+            showQuickError(data.rule_applied || 'Có lỗi xảy ra trong quá trình xử lý.');
+          } else {
+            renderQuickResult(data);
+          }
+        }, 900);
 
       } catch (err) {
+        if (err.name === 'AbortError') {
+          aborted = true;
+          return;
+        }
         console.error('[verifyQuick]', err);
+        stopQuickLoading();
+        document.getElementById('quickLoading').style.display = 'none';
         showQuickError(err instanceof TypeError
           ? 'Không thể kết nối đến máy chủ. Vui lòng thử lại.'
           : err.message);
       } finally {
-        btn.disabled = false;
-        document.getElementById('quickBtnContent').style.display = 'inline';
-        document.getElementById('quickBtnLoading').style.display = 'none';
-        document.getElementById('quickLoading').style.display    = 'none';
+        quickAbortCtrl = null;
+        if (!aborted) {
+          document.getElementById('quickBtn').disabled   = false;
+          document.getElementById('quickInput').disabled  = false;
+          document.getElementById('quickBtnContent').style.display = 'inline';
+          document.getElementById('quickBtnLoading').style.display = 'none';
+        }
       }
     }
 
@@ -1188,30 +1574,50 @@
     }
 
     /* ═══════════════════════════════════════════
-       QUICK CHECK — RESULT RENDER
+       QUICK CHECK — RESULT RENDER (animated)
     ═══════════════════════════════════════════ */
     function renderQuickResult(data) {
       const labelInfo = LABEL_MAP[data.label] || LABEL_MAP.UNCERTAIN;
       const scorePct  = Math.round(data.truthfulness_score * 100);
 
+      // Badge with pop animation
       const badge = document.getElementById('quickLabelBadge');
-      badge.textContent        = labelInfo.emoji + ' ' + labelInfo.text;
-      badge.className          = 'verdict-badge ' + labelInfo.cssClass;
-      badge.style.margin       = '0';
-      badge.style.padding      = '.4rem 1.5rem';
-      badge.style.fontSize     = '1rem';
-      badge.style.background   = labelInfo.color;
+      badge.textContent    = labelInfo.emoji + ' ' + labelInfo.text;
+      badge.className      = 'verdict-badge ' + labelInfo.cssClass;
+      badge.style.margin   = '0';
+      badge.style.padding  = '.4rem 1.5rem';
+      badge.style.fontSize = '1rem';
+      badge.style.background = ''; // let CSS gradient take over
+
+      // Trigger label animation
+      badge.classList.remove('label-pop', 'label-shake');
+      badge.getBoundingClientRect();
+      badge.classList.add(data.label === 'FAKE' ? 'label-shake' : 'label-pop');
 
       document.getElementById('quickScoreText').textContent =
         'Điểm tin cậy: ' + scorePct + '%';
-
       document.getElementById('quickRuleText').textContent =
         data.rule_applied || '';
 
+      // Score bar: gradient positioned so right edge colour matches score level
+      const scoreFill = document.getElementById('qcScoreFill');
+      scoreFill.style.transition      = 'none';
+      scoreFill.style.width           = '0%';
+      if (scorePct > 0) {
+        scoreFill.style.backgroundSize = Math.round(10000 / scorePct) + '% 100%';
+      }
+      scoreFill.getBoundingClientRect();
+      scoreFill.style.transition = 'width 1.2s ease-out';
+      scoreFill.style.width      = scorePct + '%';
+
+      // Reasoning — typewriter
       const reasoningEl = document.getElementById('quickReasoningBlock');
       if (data.reasoning) {
-        reasoningEl.innerHTML     = '<strong>⚖️ Lý luận của AI:</strong>' + escHtml(data.reasoning);
         reasoningEl.style.display = 'block';
+        reasoningEl.innerHTML = '<strong>⚖️ Lý luận của AI:</strong><span id="qcReasoningText"></span>';
+        setTimeout(function() {
+          typewriterEffect(document.getElementById('qcReasoningText'), data.reasoning, 15);
+        }, 400);
       } else {
         reasoningEl.style.display = 'none';
       }
@@ -1227,8 +1633,30 @@
       document.getElementById('quickTimeBadge').textContent =
         '⏱️ ' + formatTime(data.processing_time_ms);
 
-      document.getElementById('quickSuccessArea').style.display = 'block';
-      document.getElementById('quickErrorArea').style.display   = 'none';
+      // Slide-up reveal
+      const successArea = document.getElementById('quickSuccessArea');
+      successArea.style.display = 'block';
+      successArea.classList.remove('slide-up-anim');
+      successArea.getBoundingClientRect();
+      successArea.classList.add('slide-up-anim');
+
+      document.getElementById('quickErrorArea').style.display = 'none';
+    }
+
+    /* ═══════════════════════════════════════════
+       TYPEWRITER EFFECT
+    ═══════════════════════════════════════════ */
+    function typewriterEffect(element, text, speed) {
+      speed = speed || 15;
+      element.textContent = '';
+      var i = 0;
+      function type() {
+        if (i < text.length) {
+          element.textContent += text[i++];
+          setTimeout(type, speed);
+        }
+      }
+      type();
     }
 
     /* ═══════════════════════════════════════════
