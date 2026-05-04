@@ -1,6 +1,7 @@
 import re
 import json
-import ollama
+from utils.groq_client import get_groq_client
+from src.config import MODEL_NAME, MAX_TOKENS, TEMPERATURE
 import asyncio
 
 SYSTEM_PROMPT = """Bạn là chuyên gia phân tích văn bản pháp luật Việt Nam.
@@ -82,25 +83,21 @@ async def extract_atomic_claims(article_text: str) -> list:
     if not article_text or len(article_text.strip()) < 10:
         return []
 
-    client = ollama.AsyncClient()
+    client = get_groq_client()
 
     try:
-        response = await client.chat(
-            model='llama3.2',
+        response = await client.chat.completions.create(
+            model=MODEL_NAME,
             messages=[
                 {'role': 'system', 'content': SYSTEM_PROMPT},
                 {'role': 'user', 'content': f"Trích xuất TOÀN BỘ các ý định pháp lý từ văn bản sau, không bỏ sót bất kỳ vế nào: {article_text}"}
             ],
-            options={
-                'temperature': 0,
-                'num_predict': 512,    # reduced from 2048 — JSON output is short
-                'num_ctx':     4096,   # explicit context window
-                'top_p':       0.1,
-            },
-            format='json'
+            response_format={"type": "json_object"},
+            temperature=TEMPERATURE,
+            max_tokens=MAX_TOKENS,
         )
 
-        content = response['message']['content'].strip()
+        content = response.choices[0].message.content.strip()
 
         data = json.loads(content)
         raw_claims = data.get("claims", [])

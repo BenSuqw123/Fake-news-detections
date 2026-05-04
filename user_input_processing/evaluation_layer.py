@@ -11,9 +11,12 @@ Key design choices:
 """
 import re
 import json
-import ollama
+import groq
+from utils.groq_client import get_groq_client
+from src.config import MODEL_NAME, MAX_TOKENS, TEMPERATURE
 import asyncio
 from typing import Optional
+import time
 
 # ── System message — static instructions only, no claim data ──────────────────
 SYSTEM_INSTRUCTIONS = """Bạn là một AI kiểm chứng sự thật pháp lý.
@@ -67,6 +70,14 @@ Nếu:
 * Tuyên bố vi phạm cấu trúc pháp lý
 → trả về FAKE
 
+## Bước 1.5: Kiểm tra logic chuỗi (Chain reasoning)
+Nếu không có câu văn trực tiếp hỗ trợ tuyên bố, hãy thử:
+* Kết hợp nhiều điều luật lại với nhau
+* Ví dụ: Điều A nói X, Điều B nói Y, nếu X + Y → Z thì tuyên bố Z là TRUE
+Cụ thể:
+* "Nhân dân bầu Quốc hội" (Điều 6) + "Quốc hội bầu Chủ tịch nước" (Điều 87)
+  → "Nhân dân tham gia gián tiếp vào việc chọn Chủ tịch nước" = TRUE
+
 ## Bước 2: Kiểm tra hỗ trợ logic
 Nếu:
 * Tuyên bố nhất quán logic với bằng chứng
@@ -100,10 +111,12 @@ Tuyên bố: Công dân có thể thành lập các đảng phái chính trị �
 → FAKE
 Lý do: Mâu thuẫn với hệ thống đơn đảng.
 
-### Ví dụ 4 (TRUE - logic gián tiếp)
-Tuyên bố: Công dân tham gia gián tiếp vào việc chọn Chủ tịch nước
-→ TRUE
-Lý do: Họ bầu ra đại biểu, và đại biểu bầu ra Chủ tịch nước.
+### Ví dụ 4 (TRUE - chuỗi logic từ 2 điều)
+Tuyên bố: Người dân tham gia gián tiếp vào việc lựa chọn Chủ tịch nước
+Bằng chứng 1: Điều 6 - Nhân dân thực hiện quyền lực qua Quốc hội
+Bằng chứng 2: Điều 87 - Chủ tịch nước do Quốc hội bầu
+→ TRUE (chuỗi: Dân → QH → CT nước = gián tiếp)
+Lý do: Kết hợp Điều 6 và Điều 87 cho thấy sự tham gia gián tiếp.
 
 ### Ví dụ 5 (INSUFFICIENT)
 Tuyên bố: Việt Nam sẽ cho phép đa đảng trong tương lai
@@ -162,20 +175,41 @@ def build_user_message(claim: str, support_text: str, contra_text: str) -> str:
 
 def validate_direct_evidence(direct_evidence: str | None, support_text: str) -> str | None:
     """
-    Verify that the LLM-cited evidence actually appears in the retrieved docs.
-    Prevents hallucination from bypassing the INSUFFICIENT safety check.
+    Verify that the LLM-cited evidence appears in retrieved docs.
+    Returns the evidence string if valid, None if clearly hallucinated.
     """
     if not direct_evidence:
         return None
 
+    # If evidence_used is non-empty, first try article number matching
     cited_articles = re.findall(r'Điều\s+\d+', direct_evidence, re.IGNORECASE)
 
-    if not cited_articles:
+    if cited_articles:
+        # Strict check: at least one cited article must appear in support_text
+        for article in cited_articles:
+            article_num = re.search(r'\d+', article).group()
+            if (f"Điều {article_num}" in support_text or
+                f"Điều {article_num}]" in support_text):
+                return direct_evidence
+        # All cited articles failed — likely hallucinated article numbers
         return None
 
-    for article in cited_articles:
-        article_num = re.search(r'\d+', article).group()
-        if f"Điều {article_num}" in support_text or f"Điều {article_num}]" in support_text:
+    # No "Điều X" pattern found in evidence_used
+    # BUT: if evidence_used is non-empty and support_text is non-empty,
+    # do a keyword overlap check instead of rejecting outright
+    if direct_evidence.strip() and support_text.strip():
+        # Extract meaningful words from evidence (len > 4 to skip stopwords)
+        evidence_words = set(
+            w.lower() for w in re.findall(r'\w+', direct_evidence)
+            if len(w) > 4
+        )
+        support_words = set(
+            w.lower() for w in re.findall(r'\w+', support_text)
+            if len(w) > 4
+        )
+        overlap = evidence_words & support_words
+        # If at least 3 meaningful words overlap, accept the evidence
+        if len(overlap) >= 3:
             return direct_evidence
 
     return None
@@ -203,61 +237,68 @@ async def evaluate_final(
     docs        : Supporting docs (list of dicts with 'text', 'metadata', 'rerank_score').
     contra_docs : Contradicting docs (same format; may be empty or raw strings).
     """
+    t0 = time.perf_counter()
     if contra_docs is None:
         contra_docs = []
 
     # ── 1. Early exit when no docs at all ─────────────────────────────────────
-    if not docs:
+    # Exit only if BOTH docs and contra_docs are empty
+    if not docs and not contra_docs:
         return _build_fallback("Không tìm thấy tài liệu liên quan trong Database.")
 
-    best_rerank = max(
-        (d.get("rerank_score", d.get("score", 0.0)) for d in docs),
-        default=0.0,
-    )
-
-    if best_rerank < 0.10:
-        return _build_fallback(
-            f"Độ liên quan của dữ liệu thô quá thấp ({round(best_rerank * 100, 1)}%)."
+    # If only contra_docs exist (no support), still proceed
+    # Use contra_docs as the primary evidence source
+    if not docs and contra_docs:
+        # Set best_rerank from contra_docs instead
+        best_rerank = max(
+            (d.get("rerank_score", d.get("score", 0.0)) for d in contra_docs),
+            default=0.0,
         )
+        if best_rerank < 0.10:
+            return _build_fallback(
+                f"Độ liên quan của bằng chứng phủ nhận quá thấp ({round(best_rerank * 100, 1)}%)."
+            )
+    else:
+        best_rerank = max(
+            (d.get("rerank_score", d.get("score", 0.0)) for d in docs),
+            default=0.0,
+        )
+        if best_rerank < 0.10:
+            return _build_fallback(
+                f"Độ liên quan của dữ liệu thô quá thấp ({round(best_rerank * 100, 1)}%)."
+            )
 
+    t1 = time.perf_counter()
     # ── 2. Format docs (computed once; reused for both prompt and validation) ──
     support_text = _format_docs(docs)
     contra_text  = _format_docs(contra_docs)
+    t2 = time.perf_counter()
 
     # ── 3. Call LLM with system/user split ────────────────────────────────────
     try:
         user_msg = build_user_message(claim, support_text, contra_text)
 
-        # ── Debug: estimate prompt token count before every Ollama call ────────
-        full_prompt = SYSTEM_INSTRUCTIONS + "\n" + user_msg
-        word_count  = len(full_prompt.split())
-        token_est   = int(word_count * 1.5)   # Vietnamese inflates ~1.5× vs English
-        print(f"[DEBUG] Prompt words={word_count}, est_tokens={token_est}, limit=4096")
-        if token_est > 3500:
-            print(f"[WARNING] Prompt approaching context limit! ({token_est} tokens)")
-
-        client = ollama.AsyncClient()
-        response = await client.chat(
-            model   = "llama3.2",
+        t3 = time.perf_counter()
+        client = get_groq_client()
+        t4 = time.perf_counter()
+        response = await client.chat.completions.create(
+            model   = MODEL_NAME,
             messages= [
                 {"role": "system", "content": SYSTEM_INSTRUCTIONS},
                 {"role": "user",   "content": user_msg},
             ],
-            options = {
-                "temperature":    0,
-                "num_predict":    512,    # max output tokens
-                "num_ctx":        4096,   # explicit context window — no ambiguity
-                "repeat_penalty": 1.1,   # reduces repetition loops
-                "seed":           42,
-            },
-            format  = "json",
+            response_format={"type": "json_object"},
+            temperature=TEMPERATURE,
+            max_tokens=MAX_TOKENS,
         )
+        t5 = time.perf_counter()
 
         # ── 4. Safe JSON parse — strip markdown fences, coerce field types ──────
-        raw_text = response["message"]["content"].strip()
+        raw_text = response.choices[0].message.content.strip()
         if raw_text.startswith("```"):
             raw_text = re.sub(r"```(?:json)?", "", raw_text).strip()
 
+        # NOTE: do not name any local variable 'json' in this scope (or use local 'import json')
         try:
             llm_res = json.loads(raw_text)
             llm_res["raw_llm_text"] = raw_text
@@ -271,7 +312,6 @@ async def evaluate_final(
 
         # Coerce fields — model occasionally returns nested dicts instead of strings
         if isinstance(llm_res.get("reasoning"), (dict, list)):
-            import json
             llm_res["reasoning"] = json.dumps(llm_res["reasoning"], ensure_ascii=False)
         
         evidence_list = llm_res.get("evidence_used", [])
@@ -295,13 +335,32 @@ async def evaluate_final(
         conf_final     = calculate_confidence(best_rerank, llm_confidence)
 
         # ── 5. Validate direct_evidence against retrieved docs ────────────────
-        validated_evidence = validate_direct_evidence(raw_evidence, support_text)
+        # Only validate direct_evidence when support docs exist
+        if docs:
+            validated_evidence = validate_direct_evidence(raw_evidence, support_text)
+            if validated_evidence is None and verdict == "SUPPORTED":
+                verdict        = "INSUFFICIENT"
+                llm_confidence = min(llm_confidence, 0.45)
+                conf_final     = calculate_confidence(best_rerank, llm_confidence)
+                reasoning      = "[Bằng chứng không xác thực] " + reasoning
+        else:
+            # No support docs — skip validation, trust LLM verdict
+            validated_evidence = raw_evidence
 
-        if validated_evidence is None and verdict == "SUPPORTED":
-            verdict        = "INSUFFICIENT"
-            llm_confidence = min(llm_confidence, 0.45)
-            conf_final     = calculate_confidence(best_rerank, llm_confidence)
-            reasoning      = "[Bằng chứng không xác thực] " + reasoning
+        # For INSUFFICIENT verdicts, confidence represents certainty
+        # that we cannot determine TRUE or FALSE — floor at 0.50
+        # to distinguish from ERROR/fallback (which return 0.0)
+        if verdict == "INSUFFICIENT" and conf_final > 0.0:
+            conf_final = max(conf_final, 0.50)
+
+        t6 = time.perf_counter()
+        print(f"[TIMING] early_exit={t1-t0:.3f}s")
+        print(f"[TIMING] format_docs={t2-t1:.3f}s")
+        print(f"[TIMING] build_msg={t3-t2:.3f}s")
+        print(f"[TIMING] client_init={t4-t3:.3f}s")
+        print(f"[TIMING] llm_call={t5-t4:.3f}s")
+        print(f"[TIMING] postprocess={t6-t5:.3f}s")
+        print(f"[TIMING] TOTAL={t6-t0:.3f}s")
 
         return {
             "verdict":         verdict,
@@ -314,6 +373,18 @@ async def evaluate_final(
             "raw_llm_text":    raw_text,
         }
 
+    except groq.RateLimitError as e:
+        return _build_fallback(
+            f"Groq rate limit reached. Retry after 60s. ({str(e)})"
+        )
+    except groq.AuthenticationError:
+        return _build_fallback(
+            "Invalid GROQ_API_KEY. Check your .env file."
+        )
+    except groq.APIConnectionError as e:
+        return _build_fallback(
+            f"Cannot connect to Groq API. Check internet. ({str(e)})"
+        )
     except Exception as e:
         return _build_fallback(f"Lỗi phân tích: {str(e)}")
 

@@ -21,8 +21,14 @@ MODELS_DIR = Path(os.getenv("MODELS_DIR", MODELS_DIR))
 
 OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "your-key-here")
 
-# LLM served by Ollama (local, CPU-only)
-LLM_MODEL: str = "llama3.2"
+# LLM - Groq API
+MODEL_NAME: str       = "llama-3.3-70b-versatile"
+CLASSIFIER_MODEL: str = "llama-3.3-70b-versatile"
+GROQ_API_KEY: str     = os.getenv("GROQ_API_KEY", "")
+
+# Groq generation limits
+MAX_TOKENS: int   = 256    # JSON output is short, 256 is enough
+TEMPERATURE: float = 0.0   # deterministic for fact-checking
 
 # Embedding (multilingual, BAAI/bge-m3)
 EMBEDDING_MODEL_NAME: str = "BAAI/bge-m3"

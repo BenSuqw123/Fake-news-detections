@@ -1,5 +1,6 @@
 import json
-import ollama
+from utils.groq_client import get_groq_client
+from src.config import CLASSIFIER_MODEL, MAX_TOKENS, TEMPERATURE
 
 INPUT_GUARDRAIL_PROMPT = """Bạn là Bộ lọc Đầu vào của hệ thống tư vấn pháp luật Việt Nam.
 Dữ liệu của hệ thống bao gồm 11 văn bản luật:
@@ -82,18 +83,19 @@ def _validate_clean_query(clean_query: str | None, original: str) -> str:
 
 async def check_input_validity(user_input: str) -> dict:
     try:
-        client = ollama.AsyncClient()
-        response = await client.chat(
-            model='llama3.2',
+        client = get_groq_client()
+        response = await client.chat.completions.create(
+            model=CLASSIFIER_MODEL,
             messages=[
                 {'role': 'system', 'content': INPUT_GUARDRAIL_PROMPT},
                 {'role': 'user', 'content': user_input}
             ],
-            options={'temperature': 0},
-            format='json'
+            response_format={"type": "json_object"},
+            temperature=TEMPERATURE,
+            max_tokens=MAX_TOKENS,
         )
 
-        result = json.loads(response['message']['content'])
+        result = json.loads(response.choices[0].message.content)
 
         if not result.get("is_vietnamese"):
             return {"status": "REJECT", "message": "Hệ thống chỉ hỗ trợ tiếng Việt."}
