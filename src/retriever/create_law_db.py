@@ -7,7 +7,7 @@ import chromadb
 from tqdm import tqdm
 import torch
 from src.config import PROJECT_ROOT, MODELS_DIR
-
+from src.retriever.embedder import BGEM3Embedder
 def build_law_database_resumable(json_path: str = None):
     if json_path is None:
         json_path = PROJECT_ROOT / "RAG_LAW/Data/law_chunks.json"

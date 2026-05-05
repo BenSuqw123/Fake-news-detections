@@ -11,7 +11,6 @@ router = APIRouter()
 
 
 def _format_doc_list(docs: list) -> list[str]:
-    """Convert raw doc dicts to display strings. Handles dict or plain str."""
     out = []
     for d in (docs or []):
         if isinstance(d, dict):
@@ -29,7 +28,6 @@ def _format_doc_list(docs: list) -> list[str]:
 async def verify_claim(request: VerificationRequest):
     start_time = time.time()
 
-    # ── Step 1: Guardrail (run once, shared across all 3 methods) ─────────────
     guardrail = await check_input_validity(request.text)
     if guardrail["status"] == "REJECT":
         return VerificationResult(
@@ -44,7 +42,6 @@ async def verify_claim(request: VerificationRequest):
 
     clean_query = guardrail.get("clean_query", request.text)
 
-    # ── Step 2: Claim extraction (run once, shared) ───────────────────────────
     all_claims = []
     for chunk in chunk_query(clean_query):
         all_claims.extend(await extract_atomic_claims(chunk))
@@ -60,8 +57,6 @@ async def verify_claim(request: VerificationRequest):
             processing_time_ms    = int((time.time() - start_time) * 1000),
         )
 
-    # ── Step 3: Run 3 retrieval modes sequentially ───────────────────────────
-    # (CPU-only; sequential avoids competing Ollama requests)
     methods = ["bm25_only", "semantic_only", "hybrid_rrf"]
     raw_results = []
     for method in methods:
@@ -72,7 +67,6 @@ async def verify_claim(request: VerificationRequest):
         )
         raw_results.append(result)
 
-    # ── Step 4: Build RetrievalResult objects (now with evidence fields) ──────
     retrieval_results = []
     for method, r in zip(methods, raw_results):
         if isinstance(r, Exception):
@@ -98,7 +92,6 @@ async def verify_claim(request: VerificationRequest):
                 )
             )
 
-    # ── Step 5: Aggregate truthfulness score ──────────────────────────────────
     hybrid_result = next(
         (r for r in retrieval_results if r.method == "hybrid_rrf"), None
     )
@@ -109,7 +102,6 @@ async def verify_claim(request: VerificationRequest):
         hybrid_direct_evidence=hybrid_direct_evidence,
     )
 
-    # ── Step 6: Final verdict derived from label — single source of truth ─────
     label        = scoring_result["label"]
     all_verdicts = [r.verdict for r in retrieval_results]
 
@@ -138,7 +130,6 @@ async def verify_quick(request: VerificationRequest):
     """Fast path: runs only hybrid_rrf (~25s vs ~6min for full pipeline)."""
     start_time = time.time()
 
-    # ── Guardrail ─────────────────────────────────────────────────────────────
     guardrail = await check_input_validity(request.text)
     if guardrail["status"] == "REJECT":
         return QuickCheckResult(
@@ -151,7 +142,6 @@ async def verify_quick(request: VerificationRequest):
 
     clean_query = guardrail.get("clean_query", request.text)
 
-    # ── Claim extraction ──────────────────────────────────────────────────────
     all_claims = []
     for chunk in chunk_query(clean_query):
         all_claims.extend(await extract_atomic_claims(chunk))
@@ -165,7 +155,6 @@ async def verify_quick(request: VerificationRequest):
             processing_time_ms = int((time.time() - start_time) * 1000),
         )
 
-    # ── Run hybrid_rrf only ───────────────────────────────────────────────────
     result     = await run_pipeline(request.text, "hybrid_rrf", pre_extracted_claims=all_claims)
     verdict    = result.get("verdict", "INSUFFICIENT")
     confidence = float(result.get("confidence", 0.0))
@@ -173,7 +162,6 @@ async def verify_quick(request: VerificationRequest):
     details    = result.get("details") or [{}]
     reasoning  = details[0].get("reasoning") if details else None
 
-    # ── Score derivation (mirrors aggregator Rules 3+4 for single-method) ─────
     if verdict == "CONTRADICTED":
         score, label, final_verdict = 0.10, "FAKE", "CONTRADICTED"
     elif verdict == "SUPPORTED" and direct_ev:
@@ -183,7 +171,6 @@ async def verify_quick(request: VerificationRequest):
     elif verdict == "PARTIAL":
         score, label, final_verdict = round(confidence * 0.70, 4), "UNCERTAIN", "PARTIAL"
     else:
-        # INSUFFICIENT or SUPPORTED without validated evidence
         if confidence >= 0.80:
             score, label = 0.58, "UNCERTAIN"
         elif confidence >= 0.60:

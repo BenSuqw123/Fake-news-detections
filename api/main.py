@@ -16,55 +16,25 @@ from src.config import LLM_MODEL
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """
-    Pre-warm all heavy models before the first request arrives.
-
-    IMPORTANT — ordering matters on Windows / Python 3.14:
-    1. underthesea `word_tokenize` uses a module-level global
-       `word_tokenize_model = None` that is lazily loaded on the FIRST call.
-       FastCRFSequenceTagger.predict() internally calls
-       `self.featurizer.process(...)`. If multiple executor threads hit
-       word_tokenize simultaneously before the model is fully initialised,
-       featurizer is still None in competing threads → crash:
-           "'NoneType' object has no attribute 'process'"
-       Fix: call word_tokenize ONCE in the main thread (single-threaded)
-       BEFORE any run_in_executor, so the global is fully populated.
-
-    2. ChromaDB PersistentClient is initialised here via run_in_executor
-       to keep the event loop responsive.
-    """
+   
     import asyncio
     loop = asyncio.get_event_loop()
 
-    # ------------------------------------------------------------------ #
-    # Step 1 — Force underthesea to load its CRF model in the MAIN thread #
-    # BEFORE any executor threads touch word_tokenize.                     #
-    # This eliminates the race on the module-level word_tokenize_model.   #
-    # ------------------------------------------------------------------ #
     print("[Startup] Pre-warming underthesea word_tokenize (main thread) …")
     from underthesea import word_tokenize as _wt
     _wt("khởi động", format="text")   # single warm-up call; model now loaded
     print("[Startup] underthesea ready.")
 
-    # ------------------------------------------------------------------ #
-    # Step 2 — Load BM25 index (safe now: word_tokenize model is ready)  #
-    # ------------------------------------------------------------------ #
     print("[Startup] Pre-warming BM25 index …")
     from src.retriever.search_bm25 import load_bm25
     await loop.run_in_executor(None, load_bm25)
     print("[Startup] BM25 ready.")
 
-    # ------------------------------------------------------------------ #
-    # Step 3 — Load ChromaDB (PersistentClient, local Rust backend)       #
-    # ------------------------------------------------------------------ #
     print("[Startup] Pre-warming ChromaDB …")
     from src.retriever.search_chromadb import load_chroma
     await loop.run_in_executor(None, load_chroma)
     print("[Startup] ChromaDB ready.")
 
-    # ------------------------------------------------------------------ #
-    # Step 4 — Embedder (Ollama HTTP, non-blocking)                       #
-    # ------------------------------------------------------------------ #
     print("[Startup] Pre-warming embedder …")
     from src.retriever.embedder import get_embedder
     await loop.run_in_executor(None, get_embedder)

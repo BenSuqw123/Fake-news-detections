@@ -47,17 +47,15 @@ def hybrid_rrf_search(vector_query, bm25_query=None, top_k=5):
     try:
         vector_docs = search_chroma(vector_query, 20) or []
     except Exception as e:
-        print(f"❌ Lỗi Chroma: {e}")
+        print(f"Lỗi Chroma: {e}")
 
     try:
         bm25_docs = search_bm25(bm25_query or vector_query, 20) or []
     except Exception as e:
-        print(f"❌ Lỗi BM25: {e}")
+        print(f"Lỗi BM25: {e}")
 
-    # Nếu cả hai đều lỗi, trả về danh sách trống thay vì để Pipeline chạy tiếp
     if not vector_docs and not bm25_docs:
         return []
 
-    # Tiếp tục RRF và Reranking...
     fused = reciprocal_rank_fusion([vector_docs, bm25_docs])
     return apply_reranking(vector_query, fused, top_k=top_k)

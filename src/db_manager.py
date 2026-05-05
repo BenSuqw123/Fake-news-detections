@@ -9,7 +9,6 @@ from src.retriever.create_law_db import build_law_database_resumable
 from src.retriever.create_bm25 import build_bm25_standalone
 
 def rebuild_all_indexes(json_chunks_path: str):
-    """Rebuilds both ChromaDB and BM25 indexes synchronously to prevent drift."""
     print(f"Rebuilding indexes from {json_chunks_path}")
     print("--- Rebuilding ChromaDB ---")
     build_law_database_resumable(json_chunks_path)

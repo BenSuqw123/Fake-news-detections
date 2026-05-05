@@ -1,15 +1,3 @@
-"""
-verdict_aggregator.py
-=====================
-Aggregates per-method evaluation results into a final truthfulness score & label.
-
-Rules (in priority order):
-  1. Instant FAKE  — any method returns CONTRADICTED
-  2. Weighted score across methods (method_weight × verdict_weight × confidence)
-  3. Threshold override — hybrid INSUFFICIENT: map confidence to fixed score bands
-  4. Cap at 0.65   — score>=0.70 but hybrid lacks strong validated direct_evidence
-  5. Labels        — REAL ≥ 0.70, UNCERTAIN ≥ 0.50, FAKE < 0.50
-"""
 
 VERDICT_WEIGHTS = {
     "SUPPORTED":    1.0,
@@ -27,20 +15,8 @@ METHOD_WEIGHTS = {
 
 
 def compute_truthfulness_score(results: list, hybrid_direct_evidence: str = None) -> dict:
-    """
-    Parameters
-    ----------
-    results                : list of RetrievalResult (Pydantic objects with .method,
-                             .verdict, .confidence attributes).
-    hybrid_direct_evidence : direct_evidence string from the hybrid_rrf evaluation,
-                             or None/empty if not available.
+   
 
-    Returns
-    -------
-    { "score": float, "label": str, "rule_applied": str }
-    """
-
-    # ── Rule 1: Instant FAKE on any CONTRADICTED result ───────────────────────
     for r in results:
         if r.verdict == "CONTRADICTED":
             return {
@@ -52,7 +28,6 @@ def compute_truthfulness_score(results: list, hybrid_direct_evidence: str = None
                 ),
             }
 
-    # ── Rule 2: Weighted score ─────────────────────────────────────────────────
     total_score = 0.0
     for r in results:
         v_weight = VERDICT_WEIGHTS.get(r.verdict, 0.0)
@@ -61,11 +36,6 @@ def compute_truthfulness_score(results: list, hybrid_direct_evidence: str = None
 
     score = total_score
 
-    # ── Rule 3: Handle INSUFFICIENT hybrid result ─────────────────────────────
-    # When hybrid returns INSUFFICIENT the weighted formula collapses to ~0.08
-    # (0.6 × 0.2 × conf), losing the LLM's nuanced confidence signal.
-    # Use explicit thresholds instead so the score reflects how confident the
-    # LLM was that evidence is absent.
     has_direct_evidence = bool(
         hybrid_direct_evidence
         and str(hybrid_direct_evidence).strip().lower() not in ("null", "none", "")
@@ -76,21 +46,14 @@ def compute_truthfulness_score(results: list, hybrid_direct_evidence: str = None
         if hybrid.verdict == "INSUFFICIENT":
             llm_conf = hybrid.confidence
             if llm_conf >= 0.80:
-                # LLM confident there's partial evidence → borderline UNCERTAIN
                 score = 0.58
             elif llm_conf >= 0.60:
-                # LLM moderately confident → FAKE borderline
                 score = 0.44
             else:
-                # LLM confident nothing exists → clear FAKE
                 score = 0.25
         elif hybrid.verdict == "SUPPORTED" and not has_direct_evidence:
-            # LLM claimed SUPPORTED but gave no specific clause → likely hallucination
             score = min(score, 0.48)
 
-    # ── Rule 4: Require validated direct_evidence for REAL label ─────────────
-    # Only allow REAL if hybrid explicitly returned SUPPORTED with high confidence
-    # AND a validated direct_evidence article was found in the retrieved docs.
     has_strong_direct_evidence = (
         hybrid is not None
         and hybrid.verdict == "SUPPORTED"
@@ -101,7 +64,6 @@ def compute_truthfulness_score(results: list, hybrid_direct_evidence: str = None
     if score >= 0.70 and not has_strong_direct_evidence:
         score = min(score, 0.65)
 
-    # ── Rule 5: Labels ─────────────────────────────────────────────────────────
     if score >= 0.70:
         label        = "REAL"
         rule_applied = (

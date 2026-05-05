@@ -1,0 +1,412 @@
+{
+    "summary": {
+        "total_cases": 50,
+        "completed_cases": 50,
+        "correct": 24,
+        "accuracy": 48.0,
+        "total_time_seconds": 0.0
+    },
+    "category_breakdown": {
+        "General": {
+            "total": 50,
+            "correct": 24
+        }
+    },
+    "details": [
+        {
+            "id": "S-01",
+            "query": "Công dân có quyền tự do ngôn luận, tự do báo chí, tiếp cận thông tin theo quy định của pháp luật.",
+            "category": "General",
+            "expected_verdict": "SUPPORTED",
+            "ai_verdict": "SUPPORTED",
+            "is_correct": true,
+            "confidence": 0.6885,
+            "reasoning": "Tuyên bố 'Công dân có quyền tự do ngôn luận' được hỗ trợ bởi Hiến pháp năm 2013 - Điều 25, điều này xác định rõ công dân có quyền tự do ngôn luận, tự do báo chí, tiếp cận thông tin, hội họp, lập hội, biểu tình. Việc thực hiện các quyền này do pháp luật quy định.",
+            "evidence": "Hiến pháp năm 2013 - Điều 25, Hiến pháp năm 2013 - Điều 42",
+            "direct_evidence": "Hiến pháp năm 2013 - Điều 25, Hiến pháp năm 2013 - Điều 42",
+            "contradicting_evidence": null,
+            "eval_metrics": {
+                "claims_found": 3,
+                "supported": 3,
+                "contradicted": 0,
+                "insufficient": 0
+            },
+            "processing_time_ms": 529507
+        },
+        {
+            "id": "S-02",
+            "query": "Cá nhân có quyền đối với họ, tên. Họ, tên của một người được xác định theo họ, tên khai sinh.",
+            "category": "General",
+            "expected_verdict": "SUPPORTED",
+            "ai_verdict": "SUPPORTED",
+            "is_correct": true,
+            "confidence": 0.7158,
+            "reasoning": "Giải thích sử dụng bằng chứng và logic",
+            "evidence": "Bộ luật dân sự 2015 số 91/2015/QH13 áp dụng 2025 - Điều 26. Quyền có họ, tên: 1. Cá nhân có quyền có họ, tên (bao gồm cả chữ đệm, nếu có). Họ, tên của một người được xác định theo họ, tên khai sinh của người đó., Luật Căn cước 2023 số 26/2023/QH15 áp dụng năm 2025 - Điều 9. Thông tin trong Cơ sở dữ liệu quốc gia về dân cư: 1. Họ, chữ đệm và tên khai sinh.",
+            "direct_evidence": "Bộ luật dân sự 2015 số 91/2015/QH13 áp dụng 2025 - Điều 26. Quyền có họ, tên: 1. Cá nhân có quyền có họ, tên (bao gồm cả chữ đệm, nếu có). Họ, tên của một người được xác định theo họ, tên khai sinh của người đó., Luật Căn cước 2023 số 26/2023/QH15 áp dụng năm 2025 - Điều 9. Thông tin trong Cơ sở dữ liệu quốc gia về dân cư: 1. Họ, chữ đệm và tên khai sinh.",
+            "contradicting_evidence": null,
+            "eval_metrics": {
+                "claims_found": 1,
+                "supported": 1,
+                "contradicted": 0,
+                "insufficient": 0
+            },
+            "processing_time_ms": 223510
+        },
+        {
+            "id": "S-03",
+            "query": "Người lao động có quyền đơn phương chấm dứt hợp đồng lao động nhưng phải báo trước theo thời hạn luật định.",
+            "category": "General",
+            "expected_verdict": "SUPPORTED",
+            "ai_verdict": "SUPPORTED",
+            "is_correct": true,
+            "confidence": 0.6912,
+            "reasoning": "Giải thích sử dụng bằng chứng và logic",
+            "evidence": "Điều 94: Người sử dụng lao động phải trả lương trực tiếp, đầy đủ, đúng hạn cho người lao động., Điều 555: Phải trả đủ tiền công, đúng thời hạn và đúng phương thức đã thỏa thuận.",
+            "direct_evidence": "Điều 94: Người sử dụng lao động phải trả lương trực tiếp, đầy đủ, đúng hạn cho người lao động., Điều 555: Phải trả đủ tiền công, đúng thời hạn và đúng phương thức đã thỏa thuận.",
+            "contradicting_evidence": null,
+            "eval_metrics": {
+                "claims_found": 5,
+                "supported": 5,
+                "contradicted": 0,
+                "insufficient": 0
+            },
+            "processing_time_ms": 692238
+        },
+        {
+            "id": "S-04",
+            "query": "Người lái xe mô tô hai bánh, xe gắn máy chỉ được chở tối đa một người, trừ trường hợp chở người bệnh đi cấp cứu.",
+            "category": "General",
+            "expected_verdict": "SUPPORTED",
+            "ai_verdict": "SUPPORTED",
+            "is_correct": true,
+            "confidence": 0.6748,
+            "reasoning": "Giải thích sử dụng bằng chứng và logic",
+            "evidence": "Điều 33. Người lái xe mô tô hai bánh, xe gắn máy chỉ được chở một người, trừ những trường hợp sau thì được chở tối đa hai người: a) Chở người bệnh đi cấp cứu; b) Áp giải người có hành vi vi phạm pháp luật; c) Trẻ em dưới 12 tuổi; d) Người già yếu hoặc không thể tự mình đi",
+            "direct_evidence": "Điều 33. Người lái xe mô tô hai bánh, xe gắn máy chỉ được chở một người, trừ những trường hợp sau thì được chở tối đa hai người: a) Chở người bệnh đi cấp cứu; b) Áp giải người có hành vi vi phạm pháp luật; c) Trẻ em dưới 12 tuổi; d) Người già yếu hoặc không thể tự mình đi",
+            "contradicting_evidence": null,
+            "eval_metrics": {
+                "claims_found": 2,
+                "supported": 2,
+                "contradicted": 0,
+                "insufficient": 0
+            },
+            "processing_time_ms": 356897
+        },
+        {
+            "id": "S-05",
+            "query": "Số thẻ Căn cước công dân là số định danh cá nhân, được dùng để kết nối, khai thác thông tin trong Cơ sở dữ liệu quốc gia.",
+            "category": "General",
+            "expected_verdict": "SUPPORTED",
+            "ai_verdict": "SUPPORTED",
+            "is_correct": true,
+            "confidence": 0.6748,
+            "reasoning": "Số định danh cá nhân của công dân Việt Nam là dãy số tự nhiên gồm 12 chữ số do Cơ sở dữ liệu quốc gia về dân cư xác lập cho công dân Việt Nam, và số thẻ căn cước dùng để cấp thẻ căn cước, khai thác thông tin về công dân trong Cơ sở dữ liệu quốc gia về dân cư và các cơ sở dữ liệu quốc gia, cơ sở dữ liệu chuyên ngành, trung tâm dữ liệu quốc gia và cổng dịch vụ công.",
+            "evidence": "Luật Căn cước 2023 số 26/2023/QH15 áp dụng năm 2025. Điều 12. Số định danh cá nhân của công dân Việt Nam là dãy số tự nhiên gồm 12 chữ số do Cơ sở dữ liệu quốc gia về dân cư xác lập cho công dân Việt Nam., Luật Căn cước 2023 số 26/2023/QH15 áp dụng năm 2025. Điều 20. Thẻ căn cước hoặc số định danh cá nhân được sử dụng để cơ quan, tổ chức, cá nhân kiểm tra thông tin của người được cấp thẻ trong Cơ sở dữ liệu quốc gia về dân cư, cơ quan, tổ chức, cá nhân có thẩm quyền.",
+            "direct_evidence": "Luật Căn cước 2023 số 26/2023/QH15 áp dụng năm 2025. Điều 12. Số định danh cá nhân của công dân Việt Nam là dãy số tự nhiên gồm 12 chữ số do Cơ sở dữ liệu quốc gia về dân cư xác lập cho công dân Việt Nam., Luật Căn cước 2023 số 26/2023/QH15 áp dụng năm 2025. Điều 20. Thẻ căn cước hoặc số định danh cá nhân được sử dụng để cơ quan, tổ chức, cá nhân kiểm tra thông tin của người được cấp thẻ trong Cơ sở dữ liệu quốc gia về dân cư, cơ quan, tổ chức, cá nhân có thẩm quyền.",
+            "contradicting_evidence": null,
+            "eval_metrics": {
+                "claims_found": 5,
+                "supported": 5,
+                "contradicted": 0,
+                "insufficient": 0
+            },
+            "processing_time_ms": 731430
+        },
+        {
+            "id": "S-06",
+            "query": "Cá nhân có thu nhập từ tiền lương, tiền công thuộc diện phải nộp thuế thu nhập cá nhân.",
+            "category": "General",
+            "expected_verdict": "SUPPORTED",
+            "ai_verdict": "SUPPORTED",
+            "is_correct": true,
+            "confidence": 0.7158,
+            "reasoning": "Giải thích sử dụng bằng chứng và logic",
+            "evidence": "Điều 8. Thuế thu nhập cá nhân đối với thu nhập từ tiền lương, tiền công",
+            "direct_evidence": "Điều 8. Thuế thu nhập cá nhân đối với thu nhập từ tiền lương, tiền công",
+            "contradicting_evidence": null,
+            "eval_metrics": {
+                "claims_found": 2,
+                "supported": 2,
+                "contradicted": 0,
+                "insufficient": 0
+            },
+            "processing_time_ms": 313953
+        },
+        {
+            "id": "S-07",
+            "query": "Lao động nữ sinh con được nghỉ chế độ thai sản trước và sau khi sinh con là 06 tháng.",
+            "category": "General",
+            "expected_verdict": "SUPPORTED",
+            "ai_verdict": "SUPPORTED",
+            "is_correct": true,
+            "confidence": 0.6748,
+            "reasoning": "Giải thích sử dụng bằng chứng và logic, kết hợp các điều luật liên quan để xác định quyền lao động nữ mang thai hộ được hưởng chế độ thai sản theo quy định của pháp luật về bảo hiểm xã hội.",
+            "evidence": "Bộ luật lao động 2019 số 45/2019/QH14 áp dụng 2025 - Điều 139, Luật Bảo hiểm xã hội 2024 số 41/2024/QH15 áp dụng năm 2025 - Điều 54",
+            "direct_evidence": "Bộ luật lao động 2019 số 45/2019/QH14 áp dụng 2025 - Điều 139, Luật Bảo hiểm xã hội 2024 số 41/2024/QH15 áp dụng năm 2025 - Điều 54",
+            "contradicting_evidence": null,
+            "eval_metrics": {
+                "claims_found": 4,
+                "supported": 4,
+                "contradicted": 0,
+                "insufficient": 0
+            },
+            "processing_time_ms": 492048
+        },
+        {
+            "id": "S-08",
+            "query": "Người tiêu dùng có quyền yêu cầu bồi thường thiệt hại khi hàng hóa, dịch vụ không đúng tiêu chuẩn, chất lượng.",
+            "category": "General",
+            "expected_verdict": "SUPPORTED",
+            "ai_verdict": "SUPPORTED",
+            "is_correct": true,
+            "confidence": 0.7021,
+            "reasoning": "Giải thích sử dụng bằng chứng và logic",
+            "evidence": "Luật Bảo vệ quyền lợi người tiêu dùng 2023 số 19/2023/QH15 áp dụng 2025 - Điều 36, Bộ luật dân sự 2015 số 91/2015/QH13 áp dụng 2025 - Điều 608",
+            "direct_evidence": "Luật Bảo vệ quyền lợi người tiêu dùng 2023 số 19/2023/QH15 áp dụng 2025 - Điều 36, Bộ luật dân sự 2015 số 91/2015/QH13 áp dụng 2025 - Điều 608",
+            "contradicting_evidence": null,
+            "eval_metrics": {
+                "claims_found": 3,
+                "supported": 3,
+                "contradicted": 0,
+                "insufficient": 0
+            },
+            "processing_time_ms": 477889
+        },
+        {
+            "id": "S-09",
+            "query": "Chứng từ điện tử trong hoạt động thương mại có giá trị pháp lý như bản gốc nếu đáp ứng các điều kiện kỹ thuật.",
+            "category": "General",
+            "expected_verdict": "SUPPORTED",
+            "ai_verdict": "SUPPORTED",
+            "is_correct": true,
+            "confidence": 0.6748,
+            "reasoning": "Giải thích sử dụng bằng chứng và logic, kết hợp các điều khoản liên quan để xác định giá trị pháp lý của chứng từ điện tử trong hoạt động thương mại.",
+            "evidence": "Điều 3 Luật Thương mại điện tử 2025, Điều 36 Luật Thương mại điện tử 2025, Điều 26 Luật Bảo hiểm xã hội 2024",
+            "direct_evidence": "Điều 3 Luật Thương mại điện tử 2025, Điều 36 Luật Thương mại điện tử 2025, Điều 26 Luật Bảo hiểm xã hội 2024",
+            "contradicting_evidence": null,
+            "eval_metrics": {
+                "claims_found": 2,
+                "supported": 2,
+                "contradicted": 0,
+                "insufficient": 0
+            },
+            "processing_time_ms": 373446
+        },
+        {
+            "id": "S-10",
+            "query": "Doanh nghiệp có thu nhập chịu thuế phải nộp thuế thu nhập doanh nghiệp theo thuế suất quy định.",
+            "category": "General",
+            "expected_verdict": "SUPPORTED",
+            "ai_verdict": "SUPPORTED",
+            "is_correct": true,
+            "confidence": 0.7158,
+            "reasoning": "Giải thích sử dụng bằng chứng và logic",
+            "evidence": "Điều 3. Thu nhập chịu thuế thu nhập doanh nghiệp bao gồm thu nhập từ hoạt động sản xuất, kinh doanh hàng hóa, dịch vụ và thu nhập khác quy định tại khoản 2 Điều này., Điều 8. Doanh thu để tính thu nhập chịu thuế là toàn bộ tiền bán hàng, tiền gia công, tiền cung ứng dịch vụ kể cả trợ giá, phụ thu, phụ trội mà doanh nghiệp đư",
+            "direct_evidence": "Điều 3. Thu nhập chịu thuế thu nhập doanh nghiệp bao gồm thu nhập từ hoạt động sản xuất, kinh doanh hàng hóa, dịch vụ và thu nhập khác quy định tại khoản 2 Điều này., Điều 8. Doanh thu để tính thu nhập chịu thuế là toàn bộ tiền bán hàng, tiền gia công, tiền cung ứng dịch vụ kể cả trợ giá, phụ thu, phụ trội mà doanh nghiệp đư",
+            "contradicting_evidence": null,
+            "eval_metrics": {
+                "claims_found": 2,
+                "supported": 2,
+                "contradicted": 0,
+                "insufficient": 0
+            },
+            "processing_time_ms": 346553
+        },
+        {
+            "id": "C-01",
+            "query": "Người điều khiển xe máy được phép vượt đèn đỏ nếu không thấy cảnh sát giao thông đứng ở đó.",
+            "category": "General",
+            "expected_verdict": "CONTRADICTED",
+            "ai_verdict": "CONTRADICTED",
+            "is_correct": true,
+            "confidence": 0.6953,
+            "reasoning": "Người điều khiển xe máy không được phép vượt đèn đỏ theo quy định của pháp luật tại Điều 20, Điều 14 và các điều khoản khác trong Luật trật tự, an toàn giao thông đường bộ số 36/2024/QH15 áp dụng năm 2025. Mặc dù người điều khiển xe máy chuyên dùng phải bật sáng đèn cảnh báo màu vàng khi tham gia giao thông đường bộ, nhưng không có quy định cho phép họ vượt đèn đỏ.",
+            "evidence": "Điều 20: Người lái xe, người điều khiển xe máy chuyên dùng khi thực hiện công việc trên đường bộ phải bật sáng đèn cảnh báo màu vàng., Điều 14: Khi có xe xin vượt, người điều khiển phương tiện tham gia giao thông đường bộ phía trước phải quan sát phần đường phía trước, nếu đủ điều kiện, Điều 20. Sử dụng đèn 1. Người lái xe, người điều khiển xe máy chuyên dùng tham gia giao thông đường bộ phải bật đèn chiếu sáng phía trước trong thời gian từ 18 giờ ngày hôm trước đến 06 giờ ngày hôm sau hoặc khi có sương mù, khói, bụi, trời mưa, thời tiết xấu làm hạn chế tầm nhìn.",
+            "direct_evidence": "Điều 20: Người lái xe, người điều khiển xe máy chuyên dùng khi thực hiện công việc trên đường bộ phải bật sáng đèn cảnh báo màu vàng., Điều 14: Khi có xe xin vượt, người điều khiển phương tiện tham gia giao thông đường bộ phía trước phải quan sát phần đường phía trước, nếu đủ điều kiện, Điều 20. Sử dụng đèn 1. Người lái xe, người điều khiển xe máy chuyên dùng tham gia giao thông đường bộ phải bật đèn chiếu sáng phía trước trong thời gian từ 18 giờ ngày hôm trước đến 06 giờ ngày hôm sau hoặc khi có sương mù, khói, bụi, trời mưa, thời tiết xấu làm hạn chế tầm nhìn.",
+            "contradicting_evidence": null,
+            "eval_metrics": {
+                "claims_found": 2,
+                "supported": 1,
+                "contradicted": 1,
+                "insufficient": 0
+            },
+            "processing_time_ms": 361437
+        },
+        {
+            "id": "C-02",
+            "query": "Công ty có quyền giữ bản chính bằng đại học của người lao động để làm tin khi ký hợp đồng.",
+            "category": "General",
+            "expected_verdict": "CONTRADICTED",
+            "ai_verdict": "SUPPORTED",
+            "is_correct": false,
+            "confidence": 0.6748,
+            "reasoning": "Giải thích sử dụng bằng chứng và logic",
+            "evidence": "Bộ luật lao động 2019 số 45/2019/QH14 áp dụng 2025 - Điều 17: Giữ bản chính giấy tờ tùy thân, văn bằng, chứng chỉ của người lao động., Bộ luật lao động 2019 số 45/2019/QH14 áp dụng 2025 - Điều 156: Người lao động có quyền được giữ bằng cấp đại học nếu họ là nhân viên của công ty.",
+            "direct_evidence": "Bộ luật lao động 2019 số 45/2019/QH14 áp dụng 2025 - Điều 17: Giữ bản chính giấy tờ tùy thân, văn bằng, chứng chỉ của người lao động., Bộ luật lao động 2019 số 45/2019/QH14 áp dụng 2025 - Điều 156: Người lao động có quyền được giữ bằng cấp đại học nếu họ là nhân viên của công ty.",
+            "contradicting_evidence": null,
+            "eval_metrics": {
+                "claims_found": 4,
+                "supported": 4,
+                "contradicted": 0,
+                "insufficient": 0
+            },
+            "processing_time_ms": 610891
+        },
+        {
+            "id": "C-03",
+            "query": "Người có tổng thu nhập dưới 50 triệu đồng/tháng thì mặc định không cần phải kê khai thuế.",
+            "category": "General",
+            "expected_verdict": "CONTRADICTED",
+            "ai_verdict": "INSUFFICIENT",
+            "is_correct": false,
+            "confidence": 0.0,
+            "reasoning": "Không có bằng chứng cụ thể về việc người có tổng thu nhập dưới 50 triệu đồng/tháng phải nộp thuế thu nhập cá nhân.",
+            "evidence": "N/A",
+            "direct_evidence": null,
+            "contradicting_evidence": null,
+            "eval_metrics": {
+                "claims_found": 1,
+                "supported": 0,
+                "contradicted": 0,
+                "insufficient": 1
+            },
+            "processing_time_ms": 225523
+        },
+        {
+            "id": "C-04",
+            "query": "Mọi người có quyền đăng tải bí mật nhà nước lên Facebook nếu thông tin đó có ích cho cộng đồng.",
+            "category": "General",
+            "expected_verdict": "CONTRADICTED",
+            "ai_verdict": "CONTRADICTED",
+            "is_correct": true,
+            "confidence": 0.6953,
+            "reasoning": "Mâu thuẫn giữa Hiến pháp năm 2013 và Luật An ninh mạng 2025 về bảo vệ bí mật nhà nước trên không gian mạng.",
+            "evidence": "Hiến pháp năm 2013 - Điều 21: Mọi người có quyền bí mật thư tín, điện thoại, điện tín và các hình thức trao đổi thông tin riêng tư khác. Không ai được bóc mở, kiểm soát, thu giữ trái luật thư tín, điện thoại, điện tín và các hình, Luật An ninh mạng 2025 - Điều 15: Áp dụng để bảo vệ thông tin thuộc bí mật nhà nước, bí mật công tác, bí mật kinh doanh, bí mật cá nhân, bí mật gia đình và đời sống riêng tư; đ) Đưa lên không gian mạng các thông tin có nội dung thuộc bí mật nhà nước, Luật An ninh mạng 2025 - Điều 15: Điện tử trước khi đưa vào sử dụng trong hệ thống thông tin quan trọng về an ninh quốc gia; c) Giám sát an ninh mạng đối với hệ thống thông tin quan trọng về an ninh quốc gia nhằm phát hiện, xử lý hoạt động thu thập trái phép thông tin thuộc bí mật nhà nước",
+            "direct_evidence": "Hiến pháp năm 2013 - Điều 21: Mọi người có quyền bí mật thư tín, điện thoại, điện tín và các hình thức trao đổi thông tin riêng tư khác. Không ai được bóc mở, kiểm soát, thu giữ trái luật thư tín, điện thoại, điện tín và các hình, Luật An ninh mạng 2025 - Điều 15: Áp dụng để bảo vệ thông tin thuộc bí mật nhà nước, bí mật công tác, bí mật kinh doanh, bí mật cá nhân, bí mật gia đình và đời sống riêng tư; đ) Đưa lên không gian mạng các thông tin có nội dung thuộc bí mật nhà nước, Luật An ninh mạng 2025 - Điều 15: Điện tử trước khi đưa vào sử dụng trong hệ thống thông tin quan trọng về an ninh quốc gia; c) Giám sát an ninh mạng đối với hệ thống thông tin quan trọng về an ninh quốc gia nhằm phát hiện, xử lý hoạt động thu thập trái phép thông tin thuộc bí mật nhà nước",
+            "contradicting_evidence": null,
+            "eval_metrics": {
+                "claims_found": 2,
+                "supported": 1,
+                "contradicted": 1,
+                "insufficient": 0
+            },
+            "processing_time_ms": 335710
+        },
+        {
+            "id": "C-05",
+            "query": "Hợp đồng vay tiền với lãi suất 100% mỗi tháng là hoàn toàn hợp pháp và được nhà nước bảo hộ.",
+            "category": "General",
+            "expected_verdict": "CONTRADICTED",
+            "ai_verdict": "CONTRADICTED",
+            "is_correct": true,
+            "confidence": 0.6885,
+            "reasoning": "Giải thích sử dụng bằng chứng và logic",
+            "evidence": "Bộ luật dân sự 2015 số 91/2015/QH13 áp dụng 2025 - Điều 468. Lãi suất vay do các bên thỏa thuận., Bộ luật dân sự 2015 số 91/2015/QH13 áp dụng 2025 - Điều 466. Trường hợp các bên có thỏa thuận về việc trả lãi, nhưng không xác định rõ lãi suất và có tranh chấp về lãi suất thì lãi suất được xác định bằng 50% mức lãi suất giới hạn.",
+            "direct_evidence": "Bộ luật dân sự 2015 số 91/2015/QH13 áp dụng 2025 - Điều 468. Lãi suất vay do các bên thỏa thuận., Bộ luật dân sự 2015 số 91/2015/QH13 áp dụng 2025 - Điều 466. Trường hợp các bên có thỏa thuận về việc trả lãi, nhưng không xác định rõ lãi suất và có tranh chấp về lãi suất thì lãi suất được xác định bằng 50% mức lãi suất giới hạn.",
+            "contradicting_evidence": null,
+            "eval_metrics": {
+                "claims_found": 3,
+                "supported": 2,
+                "contradicted": 1,
+                "insufficient": 0
+            },
+            "processing_time_ms": 416089
+        },
+        {
+            "id": "C-06",
+            "query": "Chính phủ có quyền tự ý sửa đổi Hiến pháp mà không cần thông qua sự phê chuẩn của Quốc hội.",
+            "category": "General",
+            "expected_verdict": "CONTRADICTED",
+            "ai_verdict": "CONTRADICTED",
+            "is_correct": true,
+            "confidence": 0.7158,
+            "reasoning": "Tuyên bố không có quyền tự ý sửa đổi Hiến pháp mâu thuẫn với Điều 70 của Hiến pháp năm 2013, điều này cho phép Quốc hội làm việc thay mặt người dân trong việc sửa đổi Hiến pháp.",
+            "evidence": "Hiến pháp năm 2013 - Điều 70. Quốc hội có những nhiệm vụ và quyền hạn sau đây:",
+            "direct_evidence": "Hiến pháp năm 2013 - Điều 70. Quốc hội có những nhiệm vụ và quyền hạn sau đây:",
+            "contradicting_evidence": null,
+            "eval_metrics": {
+                "claims_found": 2,
+                "supported": 0,
+                "contradicted": 2,
+                "insufficient": 0
+            },
+            "processing_time_ms": 216165
+        },
+        {
+            "id": "C-07",
+            "query": "Cửa hàng được phép từ chối bảo hành nếu khách hàng mua hàng vào đợt giảm giá mạnh.",
+            "category": "General",
+            "expected_verdict": "CONTRADICTED",
+            "ai_verdict": "CONTRADICTED",
+            "is_correct": true,
+            "confidence": 0.6953,
+            "reasoning": "Tuyên bố được kiểm tra bằng cách sử dụng các điều khoản liên quan: Điều 447 và Điều 545 của Bộ luật dân sự 2015 số 91/2015/QH13 áp dụng 2025, cũng như Điều 30 của Luật Bảo vệ quyền lợi người tiêu dùng 2023 số 19/2023/QH15 áp dụng 2025. Tuyên bố không có mâu thuẫn với các điều khoản này và được xác định là TRUE dựa trên việc sử dụng logic và phân tích bằng chứng.",
+            "evidence": "Điều 447 của Bộ luật dân sự 2015 số 91/2015/QH13 áp dụng 2025, Điều 545 của Bộ luật dân sự 2015 số 91/2015/QH13 áp dụng 2025, Điều 30 của Luật Bảo vệ quyền lợi người tiêu dùng 2023 số 19/2023/QH15 áp dụng 2025",
+            "direct_evidence": "Điều 447 của Bộ luật dân sự 2015 số 91/2015/QH13 áp dụng 2025, Điều 545 của Bộ luật dân sự 2015 số 91/2015/QH13 áp dụng 2025, Điều 30 của Luật Bảo vệ quyền lợi người tiêu dùng 2023 số 19/2023/QH15 áp dụng 2025",
+            "contradicting_evidence": null,
+            "eval_metrics": {
+                "claims_found": 2,
+                "supported": 1,
+                "contradicted": 1,
+                "insufficient": 0
+            },
+            "processing_time_ms": 325719
+        },
+        {
+            "id": "C-08",
+            "query": "Website bán hàng online không cần phải thông báo hoặc đăng ký với Bộ Công thương.",
+            "category": "General",
+            "expected_verdict": "CONTRADICTED",
+            "ai_verdict": "ERROR",
+            "is_correct": false,
+            "confidence": 0.0,
+            "reasoning": "Câu hỏi nằm ngoài phạm vi 11 văn bản luật hỗ trợ.",
+            "evidence": "N/A",
+            "direct_evidence": null,
+            "contradicting_evidence": null,
+            "eval_metrics": {},
+            "processing_time_ms": 0
+        },
+        {
+            "id": "C-09",
+            "query": "Lao động nam không có bất kỳ quyền lợi nào khi vợ sinh con theo luật bảo hiểm hiện hành.",
+            "category": "General",
+            "expected_verdict": "CONTRADICTED",
+            "ai_verdict": "CONTRADICTED",
+            "is_correct": true,
+            "confidence": 0.6953,
+            "reasoning": "Giải thích sử dụng bằng chứng và logic",
+            "evidence": "Điều 53 Luật Bảo hiểm xã hội 2024 số 41/2024/QH15 áp dụng năm 2025: Lao động nam đang tham gia bảo hiểm xã hội bắt buộc khi vợ sinh con được nghỉ việc hưởng chế độ thai sản với thời gian như sau: a) 05 ngày làm việc; b) 07 ngày, Điều 50 Luật Bảo hiểm xã hội 2024 số 41/2024/QH15 áp dụng năm 2025: Lao động nữ sinh con có đủ điều kiện quy định tại khoản 2 hoặc khoản 3 hoặc khoản 5 Điều 50 của Luật này thì được trợ cấp một lần khi sinh con. Lao động nữ sinh con, Điều 139 Bộ luật lao động 2019 số 45/2019/QH14 áp dụng 2025: Lao động nam khi vợ sinh con, người lao động nhận nuôi con nuôi dưới 06 tháng tuổi, lao động nữ mang thai hộ và người lao động là người mẹ nhờ mang thai hộ được nghỉ việc hưởng chế độ thai sản theo quy định của pháp luật về bảo hiểm xã hội.",
+            "direct_evidence": "Điều 53 Luật Bảo hiểm xã hội 2024 số 41/2024/QH15 áp dụng năm 2025: Lao động nam đang tham gia bảo hiểm xã hội bắt buộc khi vợ sinh con được nghỉ việc hưởng chế độ thai sản với thời gian như sau: a) 05 ngày làm việc; b) 07 ngày, Điều 50 Luật Bảo hiểm xã hội 2024 số 41/2024/QH15 áp dụng năm 2025: Lao động nữ sinh con có đủ điều kiện quy định tại khoản 2 hoặc khoản 3 hoặc khoản 5 Điều 50 của Luật này thì được trợ cấp một lần khi sinh con. Lao động nữ sinh con, Điều 139 Bộ luật lao động 2019 số 45/2019/QH14 áp dụng 2025: Lao động nam khi vợ sinh con, người lao động nhận nuôi con nuôi dưới 06 tháng tuổi, lao động nữ mang thai hộ và người lao động là người mẹ nhờ mang thai hộ được nghỉ việc hưởng chế độ thai sản theo quy định của pháp luật về bảo hiểm xã hội.",
+            "contradicting_evidence": null,
+            "eval_metrics": {
+                "claims_found": 2,
+                "supported": 1,
+                "contradicted": 1,
+                "insufficient": 0
+            },
+            "processing_time_ms": 362818
+        },
+        {
+            "id": "C-10",
+            "query": "Bạn có thể cho người khác mượn thẻ Căn cước công dân để đi thi hộ đại học.",
+            "category": "General",
+            "expected_verdict": "CONTRADICTED",
+            "ai_verdict": "SUPPORTED",
+            "is_correct": false,
+            "confidence": 0.6748,
+            "reasoning": "Giải thích sử dụng bằng chứng và logic",
+            "evidence": "Điều 7: Không thực hiện thủ tục cấp thẻ căn cước theo quy định tại khoản 2 Điều 19 của Luật này., Điều 19: Người được cấp thẻ căn cước là công dân Việt Nam., Điều 23: Người đại diện hợp pháp thực hiện thủ tục cấp thẻ căn cước thông qua các thủ tục liên thông với đăng ký khai sinh trên cổng dịch vụ công, ứng dụng định danh quốc gia, Điều 7: Làm giả, sửa chữa, cố ý làm sai lệch nội dung thẻ căn cước, căn cước điện tử, giấy chứng nhận căn cước; chiếm đoạt, sử dụng trái phép thẻ căn cước, căn cước điện tử, giấy chứng nhận căn cước;",
+            "direct_evidence": "Điều 7: Không thực hiện thủ tục cấp thẻ căn cước theo quy định tại khoản 2 Điều 19 của Luật này., Điều 19: Người được cấp thẻ căn cước là công dân Việt Nam., Điều 23: Người đại diện hợp pháp thực hiện thủ tục cấp thẻ căn cước thông qua các thủ tục liên thông với đăng ký khai sinh trên cổng dịch vụ công, ứng dụng định danh quốc gia, Điều 7: Làm giả, sửa chữa, cố ý làm sai lệch nội dung thẻ căn cước, căn cước điện tử, giấy chứng nhận căn cước; chiếm đoạt, sử dụng trái phép thẻ căn cước, căn cước điện tử, giấy chứng nhận căn cước;",
+            "contradicting_evidence": null,
+            "eval_metrics": {
+                "claims_found": 2,
+                "supported": 2,
+                "contradicted": 0,
+                "insufficient": 0
+            },
+            "processing_time_ms": 323866
+        }
+    ]
+}

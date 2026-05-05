@@ -11,11 +11,10 @@ class RetrievalResult(BaseModel):
     top_docs:        List[str]
     verdict:         str
     confidence:      float
-    # NEW — dual evidence fields (optional for backward compat)
-    support_docs:    Optional[List[str]] = None   # formatted supporting clauses
-    contra_docs:     Optional[List[str]] = None   # formatted contradicting clauses
-    direct_evidence: Optional[str]       = None   # specific clause that proves/disproves
-    reasoning:       Optional[str]       = None   # LLM's chain-of-thought
+    support_docs:    Optional[List[str]] = None  
+    contra_docs:     Optional[List[str]] = None  
+    direct_evidence: Optional[str]       = None  
+    reasoning:       Optional[str]       = None   
 
 
 class VerificationResult(BaseModel):

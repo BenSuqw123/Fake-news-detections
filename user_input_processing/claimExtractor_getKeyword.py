@@ -62,7 +62,6 @@ def _make_fallback_claim(text: str) -> list:
     clean = text.strip()
     if not clean.endswith(('.', '?', '!')):
         clean += '.'
-    # Extract Điều references for keywords
     articles = re.findall(r'Điều\s+\d+', clean, re.IGNORECASE)
     keywords = ', '.join(articles) if articles else ""
     return [{
@@ -75,11 +74,6 @@ def _make_fallback_claim(text: str) -> list:
 
 
 async def extract_atomic_claims(article_text: str) -> list:
-    """
-    Trích xuất các tuyên bố đơn lẻ (atomic claims) từ văn bản tiếng Việt.
-    Falls back to treating the raw input as a single claim if the LLM fails
-    or returns meta-comments instead of real claims.
-    """
     if not article_text or len(article_text.strip()) < 10:
         return []
 

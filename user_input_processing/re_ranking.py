@@ -1,7 +1,6 @@
 import sys
 from pathlib import Path
 
-# Thêm đường dẫn gốc vào sys.path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from src.retriever.create_re_ranking import rerank_documents

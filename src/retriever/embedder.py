@@ -9,7 +9,6 @@ EMBED_DIM        = 1024
 
 
 def _ollama_embed(texts: List[str]) -> np.ndarray:
-    """Call Ollama /api/embed and return (N, 1024) float32 array."""
     payload = json.dumps({"model": EMBED_MODEL, "input": texts}).encode()
     req = urllib.request.Request(
         OLLAMA_EMBED_URL,
@@ -25,12 +24,10 @@ def _ollama_embed(texts: List[str]) -> np.ndarray:
 
 
 def get_embedder():
-    """Return a callable that mimics SentenceTransformer.encode() via Ollama."""
     return _OllamaEmbedder()
 
 
 class _OllamaEmbedder:
-    """Drop-in replacement for SentenceTransformer — uses Ollama bge-m3 endpoint."""
 
     def encode(
         self,
@@ -48,7 +45,6 @@ class _OllamaEmbedder:
         return result
 
 
-# Kept for backward compatibility
 class BGEM3Embedder:
     def __init__(self, model_name: str = "BAAI/bge-m3", device: str = None):
         self.dim = EMBED_DIM

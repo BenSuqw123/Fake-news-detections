@@ -1,9 +1,3 @@
-"""
-pipeline.py
-===========
-Full RAG pipeline: Guardrail → Claim extraction → Dual retrieval
-(supporting + contradicting) → Reranking → LLM evaluation.
-"""
 import asyncio
 import time
 import sys
@@ -25,7 +19,6 @@ from user_input_processing.re_ranking import apply_reranking
 
 
 def _dedup_by_id(docs: list) -> list:
-    """Remove duplicate docs (same 'id') keeping first occurrence."""
     seen = set()
     out  = []
     for d in docs:
@@ -35,24 +28,17 @@ def _dedup_by_id(docs: list) -> list:
                 seen.add(doc_id)
                 out.append(d)
         else:
-            out.append(d)   # raw strings — keep as-is
+            out.append(d)   
     return out
 
 
 async def async_process_retrieval(claim_text: str, keywords: str, method: str) -> dict:
-    """
-    Returns { "support_docs": [...], "contra_docs": [...] }
-
-    Both doc lists use the standard dict format:
-      { id, text, metadata, score, method }
-    """
     loop = asyncio.get_event_loop()
     vector_docs  = []
     bm25_docs    = []
     vector_contra = []
     bm25_contra  = []
 
-    # ── Supporting retrieval ───────────────────────────────────────────────────
     if method in ("semantic_only", "hybrid_rrf"):
         try:
             vector_docs = await loop.run_in_executor(
@@ -69,7 +55,6 @@ async def async_process_retrieval(claim_text: str, keywords: str, method: str) -
         except Exception as e:
             print(f"BM25 error: {e}")
 
-    # ── Contradicting retrieval (NEW) ─────────────────────────────────────────
     if method in ("semantic_only", "hybrid_rrf"):
         try:
             vector_contra = await loop.run_in_executor(
@@ -86,7 +71,6 @@ async def async_process_retrieval(claim_text: str, keywords: str, method: str) -
         except Exception as e:
             print(f"BM25 contradiction error: {e}")
 
-    # ── Fuse supporting docs ──────────────────────────────────────────────────
     if method == "hybrid_rrf":
         fused = reciprocal_rank_fusion([vector_docs, bm25_docs])
     elif method == "semantic_only":
@@ -94,12 +78,10 @@ async def async_process_retrieval(claim_text: str, keywords: str, method: str) -
     else:
         fused = bm25_docs
 
-    # ── Rerank supporting docs ────────────────────────────────────────────────
     reranked = await loop.run_in_executor(
         None, apply_reranking, claim_text, fused, TOP_K_RERANK
     )
 
-    # ── Deduplicate contradicting docs ────────────────────────────────────────
     contra_docs = _dedup_by_id(vector_contra + bm25_contra)
 
     return {
@@ -119,7 +101,6 @@ async def process_single_claim(claim_data: dict, method: str) -> dict:
     result = await evaluate_final(claim_text, support, contra_docs=contra)
     result["claim"] = claim_text
 
-    # ── Format top_docs for display ───────────────────────────────────────────
     top_docs_text = []
     for d in (support or [])[:TOP_K_RERANK]:
         meta    = d.get("metadata", {})
@@ -141,10 +122,7 @@ async def run_pipeline(
     pre_extracted_claims: list = None,
     mode: str = "production",
 ) -> dict:
-    """
-    Unified entry point.
-    Pass pre_extracted_claims to skip Guardrail + Extraction (used by router).
-    """
+   
     start_time = time.time()
     all_claims = []
 
@@ -183,7 +161,7 @@ async def run_pipeline(
     all_top_docs  = []
     all_support   = []
     all_contra    = []
-    direct_ev     = None   # take direct_evidence from first SUPPORTED claim
+    direct_ev     = None 
 
     for r in results:
         if isinstance(r, Exception):
@@ -201,24 +179,24 @@ async def run_pipeline(
             if direct_ev is None and r.get("direct_evidence"):
                 direct_ev = r["direct_evidence"]
 
-    # ── Aggregate verdict ─────────────────────────────────────────────────────
     supported    = sum(1 for r in clean_results if r.get("verdict") == "SUPPORTED")
+    partial      = sum(1 for r in clean_results if r.get("verdict") == "PARTIAL")
     contradicted = sum(1 for r in clean_results if r.get("verdict") == "CONTRADICTED")
     insufficient = sum(1 for r in clean_results if r.get("verdict") == "INSUFFICIENT")
 
-    if contradicted > 0:
+    if partial > 0 or (supported > 0 and (contradicted > 0 or insufficient > 0)):
+        verdict = "PARTIAL"
+    elif contradicted > 0:
         verdict = "CONTRADICTED"
     elif supported == len(clean_results) and len(clean_results) > 0:
         verdict = "SUPPORTED"
     else:
-        verdict = "PARTIAL" if supported > 0 else "INSUFFICIENT"
+        verdict = "INSUFFICIENT"
 
-    # ── Aggregate confidence ──────────────────────────────────────────────────
     conf_scores = []
     for r in clean_results:
         try:
             raw = r.get("confidence", 0.0)
-            # Handle legacy "82.5%" string format as well as plain float
             conf_scores.append(
                 float(str(raw).replace("%", "")) / 100.0
                 if "%" in str(raw)
@@ -245,6 +223,7 @@ async def run_pipeline(
         output["eval_metrics"] = {
             "claims_found": len(all_claims),
             "supported":    supported,
+            "partial":      partial,
             "contradicted": contradicted,
             "insufficient": insufficient,
         }

@@ -1,0 +1,102 @@
+[
+  {
+    "id": "S-01",
+    "query": "Công dân có quyền tự do ngôn luận, tự do báo chí, tiếp cận thông tin theo quy định của pháp luật.",
+    "expected_verdict": "SUPPORTED"
+  },
+  {
+    "id": "S-02",
+    "query": "Cá nhân có quyền đối với họ, tên. Họ, tên của một người được xác định theo họ, tên khai sinh.",
+    "expected_verdict": "SUPPORTED"
+  },
+  {
+    "id": "S-03",
+    "query": "Người lao động có quyền đơn phương chấm dứt hợp đồng lao động nhưng phải báo trước theo thời hạn luật định.",
+    "expected_verdict": "SUPPORTED"
+  },
+  {
+    "id": "S-04",
+    "query": "Người lái xe mô tô hai bánh, xe gắn máy chỉ được chở tối đa một người, trừ trường hợp chở người bệnh đi cấp cứu.",
+    "expected_verdict": "SUPPORTED"
+  },
+  {
+    "id": "S-05",
+    "query": "Số thẻ Căn cước công dân là số định danh cá nhân, được dùng để kết nối, khai thác thông tin trong Cơ sở dữ liệu quốc gia.",
+    "expected_verdict": "SUPPORTED"
+  },
+  {
+    "id": "S-06",
+    "query": "Cá nhân có thu nhập từ tiền lương, tiền công thuộc diện phải nộp thuế thu nhập cá nhân.",
+    "expected_verdict": "SUPPORTED"
+  },
+  {
+    "id": "S-07",
+    "query": "Lao động nữ sinh con được nghỉ chế độ thai sản trước và sau khi sinh con là 06 tháng.",
+    "expected_verdict": "SUPPORTED"
+  },
+  {
+    "id": "S-08",
+    "query": "Người tiêu dùng có quyền yêu cầu bồi thường thiệt hại khi hàng hóa, dịch vụ không đúng tiêu chuẩn, chất lượng.",
+    "expected_verdict": "SUPPORTED"
+  },
+  {
+    "id": "S-09",
+    "query": "Chứng từ điện tử trong hoạt động thương mại có giá trị pháp lý như bản gốc nếu đáp ứng các điều kiện kỹ thuật.",
+    "expected_verdict": "SUPPORTED"
+  },
+  {
+    "id": "S-10",
+    "query": "Doanh nghiệp có thu nhập chịu thuế phải nộp thuế thu nhập doanh nghiệp theo thuế suất quy định.",
+    "expected_verdict": "SUPPORTED"
+  },
+  {
+    "id": "C-01",
+    "query": "Người điều khiển xe máy được phép vượt đèn đỏ nếu không thấy cảnh sát giao thông đứng ở đó.",
+    "expected_verdict": "CONTRADICTED"
+  },
+  {
+    "id": "C-02",
+    "query": "Công ty có quyền giữ bản chính bằng đại học của người lao động để làm tin khi ký hợp đồng.",
+    "expected_verdict": "CONTRADICTED"
+  },
+  {
+    "id": "C-03",
+    "query": "Người có tổng thu nhập dưới 50 triệu đồng/tháng thì mặc định không cần phải kê khai thuế.",
+    "expected_verdict": "CONTRADICTED"
+  },
+  {
+    "id": "C-04",
+    "query": "Mọi người có quyền đăng tải bí mật nhà nước lên Facebook nếu thông tin đó có ích cho cộng đồng.",
+    "expected_verdict": "CONTRADICTED"
+  },
+  {
+    "id": "C-05",
+    "query": "Hợp đồng vay tiền với lãi suất 100% mỗi tháng là hoàn toàn hợp pháp và được nhà nước bảo hộ.",
+    "expected_verdict": "CONTRADICTED"
+  },
+  {
+    "id": "C-06",
+    "query": "Chính phủ có quyền tự ý sửa đổi Hiến pháp mà không cần thông qua sự phê chuẩn của Quốc hội.",
+    "expected_verdict": "CONTRADICTED"
+  },
+  {
+    "id": "C-07",
+    "query": "Cửa hàng được phép từ chối bảo hành nếu khách hàng mua hàng vào đợt giảm giá mạnh.",
+    "expected_verdict": "CONTRADICTED"
+  },
+  {
+    "id": "C-08",
+    "query": "Website bán hàng online không cần phải thông báo hoặc đăng ký với Bộ Công thương.",
+    "expected_verdict": "CONTRADICTED"
+  },
+  {
+    "id": "C-09",
+    "query": "Lao động nam không có bất kỳ quyền lợi nào khi vợ sinh con theo luật bảo hiểm hiện hành.",
+    "expected_verdict": "CONTRADICTED"
+  },
+  {
+    "id": "C-10",
+    "query": "Bạn có thể cho người khác mượn thẻ Căn cước công dân để đi thi hộ đại học.",
+    "expected_verdict": "CONTRADICTED"
+  }
+]

@@ -1,8 +1,3 @@
-"""Configuration module for Fake News Detection RAG System.
-
-Defines dynamic paths relative to project root and environment variables.
-"""
-
 import os
 from pathlib import Path
 from dotenv import load_dotenv
@@ -23,12 +18,13 @@ OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "your-key-here")
 
 # LLM - Groq API
 MODEL_NAME: str       = "llama-3.3-70b-versatile"
+LLM_MODEL: str        = MODEL_NAME
 CLASSIFIER_MODEL: str = "llama-3.3-70b-versatile"
 GROQ_API_KEY: str     = os.getenv("GROQ_API_KEY", "")
 
 # Groq generation limits
-MAX_TOKENS: int   = 256    # JSON output is short, 256 is enough
-TEMPERATURE: float = 0.0   # deterministic for fact-checking
+MAX_TOKENS: int   = 256   
+TEMPERATURE: float = 0.0   
 
 # Embedding (multilingual, BAAI/bge-m3)
 EMBEDDING_MODEL_NAME: str = "BAAI/bge-m3"
@@ -36,10 +32,9 @@ BGE_MODEL: str = EMBEDDING_MODEL_NAME
 PROCESSED_DATA_PATH = DATA_DIR / "processed" / "knowledge_unified.pkl"
 CHUNK_SIZE: int = 1000
 
-# Retrieval top-k limits — tuned to keep prompts inside llama3.2's 4096-token window
-TOP_K_RETRIEVAL: int = 10   # docs fetched from each retriever  (was 20)
-TOP_K_RERANK: int    = 3    # docs passed to LLM after reranking (was 5)
-DOC_CHAR_LIMIT: int  = 250  # max chars per doc snippet in the LLM prompt
+TOP_K_RETRIEVAL: int = 10  
+TOP_K_RERANK: int    = 3    
+DOC_CHAR_LIMIT: int  = 250 
 
 EMBED_MODEL = "deprecated-openai"
 

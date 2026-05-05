@@ -33,8 +33,6 @@ NHIỆM VỤ:
   "rejection_reason": "Lý do từ chối nếu có (tiếng Việt)"
 }"""
 
-# Keywords that strongly indicate one of the 11 supported law domains.
-# Used as safety net when the LLM incorrectly rejects in-scope input.
 _LEGAL_KEYWORDS = [
     'luật', 'điều', 'khoản', 'nghị định', 'thông tư', 'hiến pháp',
     'dân sự', 'hình sự', 'lao động', 'lương', 'thuế', 'bảo hiểm',
@@ -63,10 +61,6 @@ def _has_legal_keywords(text: str) -> bool:
 
 
 def _validate_clean_query(clean_query: str | None, original: str) -> str:
-    """
-    Guard against the LLM writing a meta-comment in clean_query instead of
-    copying/cleaning the actual input text. Falls back to original if so.
-    """
     if not clean_query or not clean_query.strip():
         return original
 
@@ -74,7 +68,6 @@ def _validate_clean_query(clean_query: str | None, original: str) -> str:
     if any(p in lower for p in _META_PATTERNS):
         return original
 
-    # If the "cleaned" result is suspiciously short relative to original, keep original.
     if len(original) > 30 and len(clean_query.strip()) < len(original) * 0.25:
         return original
 
@@ -101,7 +94,6 @@ async def check_input_validity(user_input: str) -> dict:
             return {"status": "REJECT", "message": "Hệ thống chỉ hỗ trợ tiếng Việt."}
 
         if not result.get("is_in_scope"):
-            # Secondary keyword safety net — override incorrect LLM rejection.
             if _has_legal_keywords(user_input):
                 clean_q = _validate_clean_query(result.get("clean_query"), user_input)
                 return {"status": "PASS", "clean_query": clean_q}

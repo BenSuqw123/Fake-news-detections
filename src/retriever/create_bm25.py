@@ -10,18 +10,6 @@ from underthesea import word_tokenize
 
 
 def tokenize(text: str) -> list[str]:
-    """
-    Hybrid tokenizer combining underthesea compounds + individual syllables.
-
-    underthesea produces compound tokens like 'đảng_cộng_sản_việt_nam' which
-    are precise but too specific — a query containing just 'đảng' won't match.
-    Adding individual syllables (from a clean whitespace split) means both
-    compound and partial-word queries hit the same document.
-
-    Punctuation is stripped from the syllable pass so "năm," → "năm".
-    Deduplication preserves order: compound tokens come first (higher BM25
-    specificity), syllables fill in gaps.
-    """
     compound_tokens = word_tokenize(text, format="text").lower().split()
     clean_text      = re.sub(r"[^\w\s]", " ", text.lower())
     syllable_tokens = clean_text.split()
@@ -36,7 +24,6 @@ def tokenize(text: str) -> list[str]:
 
 
 def build_bm25_standalone():
-    # Resolve paths relative to this file so the script works on any machine
     project_root   = Path(__file__).resolve().parent.parent.parent
     json_path      = project_root / "RAG_LAW" / "Data" / "law_chunks.json"
     bm25_save_path = project_root / "RAG_LAW" / "Models" / "bm25" / "bm25_database.pkl"

@@ -2,7 +2,6 @@ import re
 
 # --- OFFLINE DATA PREP ---
 def split_by_clause(text: str) -> list[str]:
-    """Helper for offline chunking: Splits text by clauses."""
     parts = re.split(r'(^|\s)(?=\d+\.\s)', text)
     clauses = []
     current_clause = ""
@@ -23,7 +22,6 @@ def split_by_clause(text: str) -> list[str]:
     return [c for c in clauses if len(c) > 5]
 
 def split_with_overlap(text: str, max_words: int, overlap: int) -> list[str]:
-    """Helper for offline chunking: Splits text with word overlaps."""
     words = text.split()
     if len(words) <= max_words:
         return [text]
@@ -45,9 +43,6 @@ def split_with_overlap(text: str, max_words: int, overlap: int) -> list[str]:
     return chunks
 
 def chunk_document(text: str, max_words: int = 120, overlap: int = 20) -> list[str]:
-    """
-    For offline data prep: splits a full law document into overlapping text chunks.
-    """
     if not text:
         return []
     
@@ -61,9 +56,6 @@ def chunk_document(text: str, max_words: int = 120, overlap: int = 20) -> list[s
 
 # --- RUNTIME QUERY PROCESSING ---
 def chunk_query(text: str) -> list[str]:
-    """
-    For runtime query processing: splits user input if it's too long before sending to AI.
-    """
     if not text:
         return []
         

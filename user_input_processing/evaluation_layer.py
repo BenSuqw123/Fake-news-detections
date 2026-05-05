@@ -1,24 +1,9 @@
-"""
-evaluation_layer.py
-===================
-LLM-based claim evaluation using supporting AND contradicting evidence.
-
-Key design choices:
-- System/user message split: static instructions in system role, dynamic data in user role.
-- direct_evidence is validated against retrieved docs to prevent hallucination.
-- Confidence is the LLM's own 0-1 score grounded by best_rerank (geometric mean).
-- evaluate_final() accepts optional contra_docs (default [] for backward compat).
-"""
 import re
 import json
-import groq
-from utils.groq_client import get_groq_client
-from src.config import MODEL_NAME, MAX_TOKENS, TEMPERATURE
+import ollama
 import asyncio
 from typing import Optional
-import time
 
-# ── System message — static instructions only, no claim data ──────────────────
 SYSTEM_INSTRUCTIONS = """Bạn là một AI kiểm chứng sự thật pháp lý.
 
 Nhiệm vụ của bạn là xác minh một tuyên bố CHỈ dựa trên các bằng chứng pháp lý được cung cấp.
@@ -139,16 +124,10 @@ Hãy cân bằng: Không quá khắt khe, không quá lỏng lẻo, Luôn hợp 
 """
 
 
-# Max chars per doc snippet sent to LLM — keeps prompt inside 4096-token window
 _DOC_CHAR_LIMIT = 250
 
 
 def _format_docs(docs: list) -> str:
-    """Convert doc-dict list to a labelled paragraph string for the prompt.
-
-    Each doc text is truncated to _DOC_CHAR_LIMIT characters to keep the
-    total prompt size within llama3.2's 4096-token context window.
-    """
     if not docs:
         return "(Không có bằng chứng)"
     lines = []
@@ -174,31 +153,20 @@ def build_user_message(claim: str, support_text: str, contra_text: str) -> str:
 
 
 def validate_direct_evidence(direct_evidence: str | None, support_text: str) -> str | None:
-    """
-    Verify that the LLM-cited evidence appears in retrieved docs.
-    Returns the evidence string if valid, None if clearly hallucinated.
-    """
     if not direct_evidence:
         return None
 
-    # If evidence_used is non-empty, first try article number matching
     cited_articles = re.findall(r'Điều\s+\d+', direct_evidence, re.IGNORECASE)
 
     if cited_articles:
-        # Strict check: at least one cited article must appear in support_text
         for article in cited_articles:
             article_num = re.search(r'\d+', article).group()
             if (f"Điều {article_num}" in support_text or
                 f"Điều {article_num}]" in support_text):
                 return direct_evidence
-        # All cited articles failed — likely hallucinated article numbers
         return None
 
-    # No "Điều X" pattern found in evidence_used
-    # BUT: if evidence_used is non-empty and support_text is non-empty,
-    # do a keyword overlap check instead of rejecting outright
     if direct_evidence.strip() and support_text.strip():
-        # Extract meaningful words from evidence (len > 4 to skip stopwords)
         evidence_words = set(
             w.lower() for w in re.findall(r'\w+', direct_evidence)
             if len(w) > 4
@@ -208,7 +176,6 @@ def validate_direct_evidence(direct_evidence: str | None, support_text: str) -> 
             if len(w) > 4
         )
         overlap = evidence_words & support_words
-        # If at least 3 meaningful words overlap, accept the evidence
         if len(overlap) >= 3:
             return direct_evidence
 
@@ -216,10 +183,7 @@ def validate_direct_evidence(direct_evidence: str | None, support_text: str) -> 
 
 
 def calculate_confidence(best_rerank: float, llm_confidence: float) -> float:
-    """
-    Ground the LLM's self-reported confidence with retrieval quality.
-    Uses geometric mean so either factor = 0 collapses the score.
-    """
+  
     return round((best_rerank * llm_confidence) ** 0.5, 4)
 
 
@@ -228,28 +192,13 @@ async def evaluate_final(
     docs: list,
     contra_docs: Optional[list] = None,
 ) -> dict:
-    """
-    Evaluate a single claim against supporting + contradicting evidence.
-
-    Parameters
-    ----------
-    claim       : The claim string to evaluate.
-    docs        : Supporting docs (list of dicts with 'text', 'metadata', 'rerank_score').
-    contra_docs : Contradicting docs (same format; may be empty or raw strings).
-    """
-    t0 = time.perf_counter()
     if contra_docs is None:
         contra_docs = []
 
-    # ── 1. Early exit when no docs at all ─────────────────────────────────────
-    # Exit only if BOTH docs and contra_docs are empty
     if not docs and not contra_docs:
         return _build_fallback("Không tìm thấy tài liệu liên quan trong Database.")
 
-    # If only contra_docs exist (no support), still proceed
-    # Use contra_docs as the primary evidence source
     if not docs and contra_docs:
-        # Set best_rerank from contra_docs instead
         best_rerank = max(
             (d.get("rerank_score", d.get("score", 0.0)) for d in contra_docs),
             default=0.0,
@@ -268,37 +217,40 @@ async def evaluate_final(
                 f"Độ liên quan của dữ liệu thô quá thấp ({round(best_rerank * 100, 1)}%)."
             )
 
-    t1 = time.perf_counter()
-    # ── 2. Format docs (computed once; reused for both prompt and validation) ──
     support_text = _format_docs(docs)
     contra_text  = _format_docs(contra_docs)
-    t2 = time.perf_counter()
 
-    # ── 3. Call LLM with system/user split ────────────────────────────────────
     try:
         user_msg = build_user_message(claim, support_text, contra_text)
 
-        t3 = time.perf_counter()
-        client = get_groq_client()
-        t4 = time.perf_counter()
-        response = await client.chat.completions.create(
-            model   = MODEL_NAME,
+        full_prompt = SYSTEM_INSTRUCTIONS + "\n" + user_msg
+        word_count  = len(full_prompt.split())
+        token_est   = int(word_count * 1.5)  
+        print(f"[DEBUG] Prompt words={word_count}, est_tokens={token_est}, limit=4096")
+        if token_est > 3500:
+            print(f"[WARNING] Prompt approaching context limit! ({token_est} tokens)")
+
+        client = ollama.AsyncClient()
+        response = await client.chat(
+            model   = "llama3.2",
             messages= [
                 {"role": "system", "content": SYSTEM_INSTRUCTIONS},
                 {"role": "user",   "content": user_msg},
             ],
-            response_format={"type": "json_object"},
-            temperature=TEMPERATURE,
-            max_tokens=MAX_TOKENS,
+            options = {
+                "temperature":    0,
+                "num_predict":    512,   
+                "num_ctx":        4096,  
+                "repeat_penalty": 1.1,  
+                "seed":           42,
+            },
+            format  = "json",
         )
-        t5 = time.perf_counter()
 
-        # ── 4. Safe JSON parse — strip markdown fences, coerce field types ──────
-        raw_text = response.choices[0].message.content.strip()
+        raw_text = response["message"]["content"].strip()
         if raw_text.startswith("```"):
             raw_text = re.sub(r"```(?:json)?", "", raw_text).strip()
 
-        # NOTE: do not name any local variable 'json' in this scope (or use local 'import json')
         try:
             llm_res = json.loads(raw_text)
             llm_res["raw_llm_text"] = raw_text
@@ -310,7 +262,6 @@ async def evaluate_final(
                 "direct_evidence": None,
             }
 
-        # Coerce fields — model occasionally returns nested dicts instead of strings
         if isinstance(llm_res.get("reasoning"), (dict, list)):
             llm_res["reasoning"] = json.dumps(llm_res["reasoning"], ensure_ascii=False)
         
@@ -334,8 +285,6 @@ async def evaluate_final(
         llm_confidence = max(0.0, min(1.0, llm_confidence))
         conf_final     = calculate_confidence(best_rerank, llm_confidence)
 
-        # ── 5. Validate direct_evidence against retrieved docs ────────────────
-        # Only validate direct_evidence when support docs exist
         if docs:
             validated_evidence = validate_direct_evidence(raw_evidence, support_text)
             if validated_evidence is None and verdict == "SUPPORTED":
@@ -344,23 +293,10 @@ async def evaluate_final(
                 conf_final     = calculate_confidence(best_rerank, llm_confidence)
                 reasoning      = "[Bằng chứng không xác thực] " + reasoning
         else:
-            # No support docs — skip validation, trust LLM verdict
             validated_evidence = raw_evidence
 
-        # For INSUFFICIENT verdicts, confidence represents certainty
-        # that we cannot determine TRUE or FALSE — floor at 0.50
-        # to distinguish from ERROR/fallback (which return 0.0)
         if verdict == "INSUFFICIENT" and conf_final > 0.0:
             conf_final = max(conf_final, 0.50)
-
-        t6 = time.perf_counter()
-        print(f"[TIMING] early_exit={t1-t0:.3f}s")
-        print(f"[TIMING] format_docs={t2-t1:.3f}s")
-        print(f"[TIMING] build_msg={t3-t2:.3f}s")
-        print(f"[TIMING] client_init={t4-t3:.3f}s")
-        print(f"[TIMING] llm_call={t5-t4:.3f}s")
-        print(f"[TIMING] postprocess={t6-t5:.3f}s")
-        print(f"[TIMING] TOTAL={t6-t0:.3f}s")
 
         return {
             "verdict":         verdict,
@@ -373,18 +309,6 @@ async def evaluate_final(
             "raw_llm_text":    raw_text,
         }
 
-    except groq.RateLimitError as e:
-        return _build_fallback(
-            f"Groq rate limit reached. Retry after 60s. ({str(e)})"
-        )
-    except groq.AuthenticationError:
-        return _build_fallback(
-            "Invalid GROQ_API_KEY. Check your .env file."
-        )
-    except groq.APIConnectionError as e:
-        return _build_fallback(
-            f"Cannot connect to Groq API. Check internet. ({str(e)})"
-        )
     except Exception as e:
         return _build_fallback(f"Lỗi phân tích: {str(e)}")
 
